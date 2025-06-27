@@ -1,0 +1,18 @@
+.sidebar-style {
+    background:#2b62a5;
+    /* background: linear-gradient(319deg, #2b62a5 5%, rgba(43, 98, 165, 1) 17%, rgba(65, 105, 225, 0.7) 60%); */
+    background-size: cover;  /* Ensures the image covers the entire element */
+    background-repeat: no-repeat;
+    background-position: center;
+}
+
+.loader__figure {
+    animation: spin 1s linear infinite;
+  }
+  
+  @keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+  }
+  
+
