@@ -192,6 +192,21 @@ TestJig
 </Link>
 </li>
 
+{/* Users */}
+<li>
+<Link
+to="/group"
+className="flex items-center p-3 text-white rounded-lg hover:bg-gray-200 group"
+>
+<i className="bx bx-group text-xl text-white group-hover:text-black flex-shrink-0"></i>
+{isOpen && (
+<span className="nav-text ml-3 text-white group-hover:text-black font-['Poppins'] truncate">
+Production Lines
+</span>
+)}
+</Link>
+</li>
+
 
 </ul>
 </div>
