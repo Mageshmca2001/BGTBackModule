@@ -4,10 +4,10 @@ import axios from 'axios';
 import Cookies from 'js-cookie';
 
 import '../css/Sidebar.css';
-
 import logoImage from '../assets/Bright.png';
 import bg from '../assets/Mac.jpg';
 
+// Loading dots animation
 const LoadingDots = () => (
 <div
 style={{
@@ -85,7 +85,6 @@ response = await attemptLogin('http://localhost:3000/user/login');
 usedEndpoint = 'user';
 } catch (secondaryError) {
 if (secondaryError.response?.status === 403) {
-console.log('Secondary login 403 – showing inactive modal');
 setShowInactiveModal(true);
 setIsLoading(false);
 return;
@@ -96,21 +95,22 @@ throw secondaryError;
 
 const { user, token } = response.data;
 
-console.log('Used endpoint:', usedEndpoint);
-console.log('User status:', user.status);
-
-if (usedEndpoint === 'user' && user.status.toLowerCase() !== 'active') {
-console.log('Inactive user detected, showing modal');
+if (usedEndpoint === 'user' && user.status?.toLowerCase() !== 'active') {
 setShowInactiveModal(true);
 setIsLoading(false);
 return;
 }
 
+const safeUserName = user.username || user.name || 'Guest';
+const safeUserRole = user.role || 'User';
+
 Cookies.set('token', token);
+Cookies.set('userName', safeUserName);
+Cookies.set('userRole', safeUserRole);
 
 if (rememberMe) {
 Cookies.set('loginName', username);
-Cookies.set('loginPassword', password); // Only for dev
+Cookies.set('loginPassword', password); // Dev only
 } else {
 Cookies.remove('loginName');
 Cookies.remove('loginPassword');
@@ -119,14 +119,14 @@ Cookies.remove('loginPassword');
 setLoginSuccessMessage('Login Successful!');
 setIsLoading(false);
 
-const role = user.role.toLowerCase();
+const role = safeUserRole.toLowerCase();
 
 if (role === 'admin' || role === 'planthead') {
-  navigate('/admin');
-} else if (['user','linehead', 'testingengineer'].includes(role)) {
-  navigate('/users');
+navigate('/admin');
+} else if (['user', 'linehead', 'testingengineer'].includes(role)) {
+navigate('/users');
 } else {
-  setErrors((prev) => ({ ...prev, password: 'Unauthorized role' }));
+setErrors((prev) => ({ ...prev, password: 'Unauthorized role' }));
 }
 } catch (error) {
 setIsLoading(false);
@@ -137,7 +137,7 @@ setErrors((prev) => ({ ...prev, password: msg }));
 
 return (
 <div className="relative h-screen w-full flex items-start justify-center bg-gray-100 pt-[20px] p-5">
-{/* Background Image */}
+{/* Background */}
 <div
 className="absolute top-0 left-0 w-full h-full bg-cover bg-center zoom-animation"
 style={{
@@ -155,8 +155,8 @@ opacity: 0.3,
 
 {/* Inactive Modal */}
 {showInactiveModal && (
-<div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm transition-opacity duration-300 ease-out">
-<div className="bg-white rounded-2xl p-8 w-[90%] max-w-sm text-center shadow-2xl transform transition-all duration-300 scale-95 animate-fade-in">
+<div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
+<div className="bg-white rounded-2xl p-8 w-[90%] max-w-sm text-center shadow-2xl">
 <div className="text-yellow-400 text-5xl mb-4">⚠️</div>
 <h2 className="text-2xl font-bold text-gray-800 mb-2">Account Inactive</h2>
 <p className="text-gray-600 mb-6">
@@ -164,7 +164,7 @@ Your account is currently inactive. Please contact your administrator to continu
 </p>
 <button
 onClick={() => setShowInactiveModal(false)}
-className="bg-red-500 hover:bg-red-600 text-white font-semibold py-2 px-6 rounded-lg shadow-md transition duration-200 ease-in-out"
+className="bg-red-500 hover:bg-red-600 text-white font-semibold py-2 px-6 rounded-lg"
 >
 OK
 </button>
@@ -172,7 +172,7 @@ OK
 </div>
 )}
 
-{/* Login Box */}
+{/* Login Form */}
 <div className="bg-white shadow-md p-8 w-full max-w-md text-center z-10">
 <div className="flex flex-wrap items-center justify-center gap-2 mb-4">
 <img src={logoImage} alt="Logo" className="h-10 w-auto sm:h-12" />

@@ -13,6 +13,7 @@ import UserMeterReports from "./Usersboard/MeterReport";
 import AdMeterReports from "./Adminboard/MeterReport";
 import Userinfo from "./Adminboard/User";
 import AdTestjig from "./Adminboard/TestJig";
+import AdProduction from "./Adminboard/BGTProduction";
 
 const App = () => {
 return (
@@ -28,6 +29,7 @@ return (
 <Route path="/pages/Meter" element={<AdMeterReports />} />
 <Route path="/user" element={<Userinfo />} />
 <Route path="/testJig" element={<AdTestjig />} />
+<Route path="/group" element={<AdProduction />} />
 </Route>
 
 <Route element={<ProtectedRoute allowedRoles={['user','linehead','testingengineer']} />}>
