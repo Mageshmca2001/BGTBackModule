@@ -172,7 +172,7 @@ return (
 <div className="flex flex-col md:flex-row md:items-center md:justify-between p-2 mb-4">
 {/* Left: Title & Dropdown below */}
 <div className="flex flex-col">
-<span className="text-3xl text-primary font-poppins mb-2">Dashboard</span>
+<span className="text-3xl text-primary font-poppins mb-3">Dashboard</span>
 <select
 value={selectedRange}
 onChange={handleRangeChange}
