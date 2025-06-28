@@ -2,13 +2,16 @@ import { toBinary } from "../utils/binary.js";
 
 const StagefiveFinalTest = ({
 filteredData,
-criticalParameters,
-finalParameters,
-hardwareKeys,
-mappedHardwareParameters,
+finalTestData,
+serialNumber,
 stagefiveCollapsed,
 setStagefiveCollapsed,
 }) => {
+const matchedFinal = finalTestData.find(
+(item) =>
+item.PCBSerialNumber?.trim().toLowerCase() === serialNumber.trim().toLowerCase()
+);
+
 return (
 <div className="mt-6">
 {/* Section Header */}
@@ -64,75 +67,37 @@ filteredData.map((item, index) => (
 </div>
 ))
 ) : (
-<p className="text-center text-gray-600">No data found.</p>
+<p className="text-center text-gray-600">No user data found.</p>
 )}
 </div>
 
-{/* Critical & Final Parameters */}
+{/* Final Parameters */}
 <div className="bg-primary text-white font-[poppins] p-4 rounded-t mt-8">
-Critical & Final Parameters
+Final Parameters
 </div>
 <div className="overflow-x-auto">
+{matchedFinal ? (
 <table className="min-w-full table-fixed border border-gray-500 rounded text-sm sm:text-base mb-6">
 <thead className="bg-gray-200">
 <tr>
-<th className="border border-gray-500 px-2 sm:px-4 py-2 text-left w-1/4">Critical Key</th>
-<th className="border border-gray-500 px-2 sm:px-4 py-2 text-left w-1/4">Critical Value</th>
 <th className="border border-gray-500 px-2 sm:px-4 py-2 text-left w-1/4">Final Key</th>
 <th className="border border-gray-500 px-2 sm:px-4 py-2 text-left w-1/4">Final Value</th>
 </tr>
 </thead>
 <tbody>
-{Array.from({
-length: Math.max(
-Object.keys(criticalParameters).length,
-Object.keys(finalParameters).length
-),
-}).map((_, index) => {
-const cKey = Object.keys(criticalParameters)[index];
-const cVal = criticalParameters[cKey];
-const fKey = Object.keys(finalParameters)[index];
-const fVal = finalParameters[fKey];
-return (
-<tr key={index}>
-<td className="border border-gray-400 px-2 sm:px-4 py-2">{cKey || ""}</td>
-<td className="border border-gray-400 px-2 sm:px-4 py-2">{cVal || ""}</td>
-<td className="border border-gray-400 px-2 sm:px-4 py-2">{fKey || ""}</td>
-<td className="border border-gray-400 px-2 sm:px-4 py-2">
-{fKey === "HardwareStatus"
-? toBinary(Number(fVal))
-: fVal || ""}
-</td>
-</tr>
-);
-})}
-</tbody>
-</table>
-</div>
-
-{/* Hardware Status */}
-<div className="bg-primary text-white font-[poppins] p-4 rounded-t mt-8">
-Hardware Status
-</div>
-<div className="overflow-x-auto">
-<table className="min-w-full table-fixed border border-gray-500 rounded text-sm sm:text-base mb-6">
-<thead className="bg-gray-200">
-<tr>
-<th className="border border-gray-500 px-2 sm:px-4 py-2 text-left w-1/2">Hardware Parameter</th>
-<th className="border border-gray-500 px-2 sm:px-4 py-2 text-left w-1/2">Status</th>
-</tr>
-</thead>
-<tbody>
-{hardwareKeys.map((key, index) => (
+{Object.entries(matchedFinal).map(([key, value], index) => (
 <tr key={index}>
 <td className="border border-gray-400 px-2 sm:px-4 py-2">{key}</td>
-<td className="border border-gray-400 px-2 sm:px-4 py-2">
-{mappedHardwareParameters[key]}
-</td>
+<td className="border border-gray-400 px-2 sm:px-4 py-2">{value}</td>
 </tr>
 ))}
 </tbody>
 </table>
+) : (
+<p className="text-center text-gray-600">
+No final test data found for this Serial Number.
+</p>
+)}
 </div>
 </div>
 )}

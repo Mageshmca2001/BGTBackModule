@@ -1,11 +1,7 @@
-import { toBinary } from "../utils/binary.js";
 
 const StageTwoCalibrationTest = ({
 filteredData,
-criticalParameters,
-finalParameters,
-hardwareKeys,
-mappedHardwareParameters,
+calibrationData,
 stageTwoCollapsed,
 setStageTwoCollapsed,
 }) => {
@@ -70,7 +66,7 @@ filteredData.map((item, index) => (
 
 {/* Calibration & Final Parameters */}
 <div className="bg-primary text-white font-[poppins] p-4 rounded-t mt-8">
-Calibration & Final Parameters
+Calibration Parameters
 </div>
 <div className="overflow-x-auto">
 <table className="min-w-full table-fixed border border-gray-500 rounded text-sm sm:text-base mb-6">
@@ -78,31 +74,22 @@ Calibration & Final Parameters
 <tr>
 <th className="border border-gray-500 px-2 sm:px-4 py-2 text-left w-1/4">Calibration Key</th>
 <th className="border border-gray-500 px-2 sm:px-4 py-2 text-left w-1/4">Calibration Value</th>
-<th className="border border-gray-500 px-2 sm:px-4 py-2 text-left w-1/4">Final Key</th>
-<th className="border border-gray-500 px-2 sm:px-4 py-2 text-left w-1/4">Final Value</th>
 </tr>
 </thead>
 <tbody>
 {Array.from({
 length: Math.max(
-Object.keys(criticalParameters).length,
-Object.keys(finalParameters).length
+Object.keys(calibrationData).length,
+
 ),
 }).map((_, index) => {
-const cKey = Object.keys(criticalParameters)[index];
-const cVal = criticalParameters[cKey];
-const fKey = Object.keys(finalParameters)[index];
-const fVal = finalParameters[fKey];
+const cKey = Object.keys(calibrationData)[index];
+const cVal = calibrationData[cKey];
+
 return (
 <tr key={index}>
 <td className="border border-gray-400 px-2 sm:px-4 py-2">{cKey || ""}</td>
 <td className="border border-gray-400 px-2 sm:px-4 py-2">{cVal || ""}</td>
-<td className="border border-gray-400 px-2 sm:px-4 py-2">{fKey || ""}</td>
-<td className="border border-gray-400 px-2 sm:px-4 py-2">
-{fKey === "HardwareStatus"
-? toBinary(Number(fVal))
-: fVal || ""}
-</td>
 </tr>
 );
 })}
@@ -110,30 +97,7 @@ return (
 </table>
 </div>
 
-{/* Hardware Status */}
-<div className="bg-primary text-white font-[poppins] p-4 rounded-t mt-8">
-Hardware Status
-</div>
-<div className="overflow-x-auto">
-<table className="min-w-full table-fixed border border-gray-500 rounded text-sm sm:text-base mb-6">
-<thead className="bg-gray-200">
-<tr>
-<th className="border border-gray-500 px-2 sm:px-4 py-2 text-left w-1/2">Hardware Parameter</th>
-<th className="border border-gray-500 px-2 sm:px-4 py-2 text-left w-1/2">Status</th>
-</tr>
-</thead>
-<tbody>
-{hardwareKeys.map((key, index) => (
-<tr key={index}>
-<td className="border border-gray-400 px-2 sm:px-4 py-2">{key}</td>
-<td className="border border-gray-400 px-2 sm:px-4 py-2">
-{mappedHardwareParameters[key]}
-</td>
-</tr>
-))}
-</tbody>
-</table>
-</div>
+
 </div>
 )}
 </div>

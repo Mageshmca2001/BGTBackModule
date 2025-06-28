@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import StarCard from '../components/StarCard';
 import { Pie, Bar } from 'react-chartjs-2';
 import {
@@ -14,7 +14,10 @@ ArcElement,
 
 ChartJS.register(CategoryScale, LinearScale, BarElement, ArcElement, Title, Tooltip, Legend);
 
-const timeData = ['08:00', '10:00', '12:00', '14:00', '16:00', '18:00', '20:00', '22:00', '00:00', '02:00', '04:00', '06:00'];
+const timeData = [
+'08:00', '10:00', '12:00', '14:00', '16:00', '18:00',
+'20:00', '22:00', '00:00', '02:00', '04:00', '06:00',
+];
 
 const metricsData = {
 tested: [2000, 3500, 4500, 7000, 7000, 3000, 3500, 4500, 5000, 8000, 4000, 3000],
@@ -52,6 +55,16 @@ const Dashboard = () => {
 const [data, setData] = useState(null);
 const [loading, setLoading] = useState(true);
 const [error, setError] = useState(null);
+const [selectedRange, setSelectedRange] = useState('Day');
+const [currentDate, setCurrentDate] = useState(new Date());
+
+useEffect(() => {
+const interval = setInterval(() => setCurrentDate(new Date()), 1000);
+return () => clearInterval(interval);
+}, []);
+
+const formattedDate = currentDate.toLocaleDateString('en-GB');
+const formattedTime = currentDate.toLocaleTimeString();
 
 const fetchData = async () => {
 try {
@@ -73,32 +86,30 @@ return () => clearInterval(interval);
 }, []);
 
 if (loading) return <LoadingDots />;
-if (error) return <div className="text-center text-red-600 mt-10 font-semibold">Error: {error}</div>;
+if (error) return (
+<div className="text-center text-red-600 mt-10 font-semibold font-poppins">
+Error: {error}
+</div>
+);
 
-const { tested, completed, reworked } = metricsData;
-const totalTested = tested.at(-1);
+const { completed, reworked } = metricsData;
 const totalCompleted = completed.at(-1);
 const totalReworked = reworked.at(-1);
-const inProgress = totalTested - totalCompleted - totalReworked;
+const inProgress = totalCompleted - totalReworked;
 
 const pieData = {
-labels: ['Completed', 'Reworked', 'In Progress'],
-datasets: [{
+labels: ['Completed', 'Reworked'],
+datasets: [
+{
 data: [totalCompleted, totalReworked, inProgress],
-backgroundColor: ['rgba(22, 163, 74, 1)', 'rgba(239, 68, 68, 1)', 'rgba(59, 130, 246, 1)'],
-}],
+backgroundColor: ['rgba(22, 163, 74, 1)', 'rgba(239, 68, 68, 1)'],
+},
+],
 };
 
 const barData = {
 labels: timeData,
 datasets: [
-{
-label: 'Tested',
-data: tested,
-backgroundColor: 'rgba(249, 115, 22, 1)',
-borderColor: '#000',
-borderWidth: 1,
-},
 {
 label: 'Completed',
 data: completed,
@@ -115,7 +126,7 @@ maintainAspectRatio: false,
 plugins: {
 legend: {
 position: 'bottom',
-labels: { font: { size: 12 } },
+labels: { font: { size: 13 } },
 },
 },
 scales: {
@@ -150,13 +161,43 @@ title: "Present Year"
 },
 ];
 
+const handleRangeChange = (e) => {
+setSelectedRange(e.target.value);
+console.log("Selected Range:", e.target.value);
+};
+
 return (
-<main className="flex-1 px-2">
-{/* Header */}
-<div className="text-3xl font-poppins text-primary p-2">Dashboard</div>
+<main className="flex-1 px-2 font-poppins">
+{/* Header with title, dropdown BELOW, and date/time */}
+<div className="flex flex-col md:flex-row md:items-center md:justify-between p-2 mb-4">
+{/* Left: Title & Dropdown below */}
+<div className="flex flex-col">
+<span className="text-3xl text-primary font-poppins mb-2">Dashboard</span>
+<select
+value={selectedRange}
+onChange={handleRangeChange}
+className="border border-gray-300 rounded px-3 py-2 text-base w-35"
+>
+<option value="Day">Day</option>
+<option value="Week">Week</option>
+<option value="Month">Month</option>
+<option value="Year">Year</option>
+</select>
+</div>
+
+{/* Right: Date & Time */}
+<div className="flex space-x-4 mt-4 md:mt-0">
+<div className="bg-primary text-white px-4 py-2 rounded-lg shadow-lg font-semibold">
+Date: {formattedDate}
+</div>
+<div className="bg-primary text-white px-4 py-2 rounded-lg shadow-lg font-semibold">
+Time: {formattedTime}
+</div>
+</div>
+</div>
 
 {/* Summary Cards */}
-<section className="bg-white rounded-lg shadow-lg p-4 md:p-6 mt-2">
+<section className="bg-white rounded-lg shadow-lg p-4 md:p-6 mt-2 font-poppins">
 <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-6">
 {cardData.map((item, i) => (
 <div
@@ -175,7 +216,7 @@ title={item.title}
 </section>
 
 {/* Charts */}
-<section className="bg-white rounded-lg shadow-lg p-6 mt-4">
+<section className="bg-white rounded-lg shadow-lg p-6 mt-4 font-poppins">
 <h2 className="text-2xl text-gray-700 font-bold text-center mb-6">
 Meter Testing Analysis Dashboard
 </h2>

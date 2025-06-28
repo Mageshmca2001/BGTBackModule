@@ -2,9 +2,6 @@ import { useState, useEffect } from 'react';
 import axios from 'axios';
 import StageOneFunctionalTest from '../stagescom/FunctionaTest';
 import StageTwoCalibrationTest from '../stagescom/CalibartionTest';
-import StageThreeAccuracyTest from '../stagescom/AccuracyTest';
-import StagefourNicTest from '../stagescom/NICTest';
-import StagefiveFinalTest from '../stagescom/FinalTest';
 import { toBinary } from '../utils/binary';
 
 const Meter = () => {
@@ -12,16 +9,18 @@ const [data, setData] = useState([]);
 const [criticalParameters, setCriticalParameters] = useState({});
 const [finalParameters, setFinalParameters] = useState([]);
 const [finalMatchedParameters, setFinalMatchedParameters] = useState(null);
+const [matchedCalibration, setMatchedCalibration] = useState(null);
+
 const [serialNumber, setSerialNumber] = useState('');
 const [filteredData, setFilteredData] = useState([]);
 const [dateTime, setDateTime] = useState(new Date());
 const [notFoundMessage, setNotFoundMessage] = useState({ visible: false, message: '' });
 const [showStageOne, setShowStageOne] = useState(false);
+
 const [stageOneCollapsed, setStageOneCollapsed] = useState(true);
 const [stageTwoCollapsed, setStageTwoCollapsed] = useState(true);
-const [stageThreeCollapsed, setStageThreeCollapsed] = useState(true);
-const [stagefourCollapsed, setStagefourCollapsed] = useState(true);
-const [stagefiveCollapsed, setStagefiveCollapsed] = useState(true);
+
+const [calibrationData, setCalibrationData] = useState([]);
 
 const hardwareKeys = [
 'LCD', 'LED', 'Relay', 'EEPROM', 'Flash', 'Scroll',
@@ -35,16 +34,26 @@ document.title = 'BGT - Meter Report';
 
 const fetchData = async () => {
 try {
-const [dataRes, criticalRes, finalRes] = await Promise.all([
+const [
+dataRes, criticalRes, finalRes,
+nicTestRes, calibrationRes, accuracyTestRes, finalTestRes
+] = await Promise.all([
 axios.get('http://192.168.29.50:7000/api/data'),
 axios.get('http://192.168.29.50:7000/api/Criticalcomponents'),
-axios.get('http://192.168.29.50:7000/api/finalparameters')
+axios.get('http://192.168.29.50:7000/api/finalparameters'),
+axios.get('http://192.168.29.50:7000/api/NICTestJig'),
+axios.get('http://192.168.29.50:7000/api/Calibration'),
+axios.get('http://192.168.29.50:7000/api/AccuracyTest'),
+axios.get('http://192.168.29.50:7000/api/FinalTest')
 ]);
+
+console.log("✅ Calibration Response:", calibrationRes.data);
 
 setData(dataRes.data?.data || []);
 setFilteredData(dataRes.data?.data || []);
 setCriticalParameters(criticalRes.data?.criticalParameters?.[0] || {});
 setFinalParameters(finalRes.data?.finalParameters || []);
+setCalibrationData(calibrationRes.data?.Calibration || []); // ✅ <- your key!
 } catch (error) {
 console.error('❌ API Fetch Error:', error);
 }
@@ -71,14 +80,33 @@ setNotFoundMessage({ visible: false, message: '' });
 return;
 }
 
-const matched = finalParameters.find(p => p.SerialNo?.trim().toLowerCase() === inputSN);
+const matched = finalParameters.find(
+p => p?.PCBSerialNumber?.trim().toLowerCase() === inputSN
+);
+
+console.log("🔍 Final Parameters:", finalParameters);
+console.log("🔍 Calibration Data:", calibrationData);
+console.log("🔍 Input SN:", inputSN);
+
+const matchedCalib = calibrationData.find(
+c => c?.PCBSerialNumber?.trim().toLowerCase() === inputSN
+);
+
+console.log("✅ Matched Final:", matched);
+console.log("✅ Matched Calibration:", matchedCalib);
+
+calibrationData.forEach(c => {
+console.log("📌 Comparing:", c.PCBSerialNumber?.trim().toLowerCase(), "vs", inputSN);
+});
 
 if (matched) {
 setFinalMatchedParameters(matched);
+setMatchedCalibration(matchedCalib || null);
 setShowStageOne(true);
 setNotFoundMessage({ visible: false, message: '' });
 } else {
 setFinalMatchedParameters(null);
+setMatchedCalibration(null);
 setShowStageOne(false);
 setNotFoundMessage({ visible: true, message: 'Serial Number was not found in records.' });
 }
@@ -86,6 +114,7 @@ setNotFoundMessage({ visible: true, message: 'Serial Number was not found in rec
 
 const handleExport = () => {
 console.log('📤 Exporting data:', filteredData);
+// Implement export logic here if needed
 };
 
 let binaryHardwareStatus = '';
@@ -100,10 +129,10 @@ mappedHardwareParameters[key] = bit === '1' ? 'OK' : 'NOT OK';
 }
 
 return (
-<div className="p-4 font-[poppins]">
-<h1 className="text-3xl text-primary">Meter Reports</h1>
+<div className="w-full overflow-x-hidden px-0 pb-10">
+<h1 className="text-3xl font-[poppins] text-primary">Meters Reports</h1>
 
-{/* Time and Date */}
+{/* Date & Time Display */}
 <div className="flex justify-end space-x-2 items-center mt-4">
 <p className="bg-primary text-white font-semibold w-60 h-10 rounded-lg shadow-lg flex items-center justify-center">
 Date: {formattedDate}
@@ -147,7 +176,7 @@ className="bg-green-600 text-white px-4 py-2 rounded mt-6 hover:bg-gray-400 w-fu
 </div>
 </div>
 
-{/* Error Message Modal */}
+{/* Error Message */}
 {notFoundMessage.visible && (
 <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
 <div className="bg-white rounded-lg shadow-lg p-6 w-full max-w-md text-center">
@@ -163,9 +192,8 @@ OK
 </div>
 )}
 
-{/* Show Test Stages */}
+{/* Test Stages */}
 {showStageOne && finalMatchedParameters && (
-<>
 <StageOneFunctionalTest
 filteredData={filteredData}
 criticalParameters={criticalParameters}
@@ -175,43 +203,16 @@ mappedHardwareParameters={mappedHardwareParameters}
 stageOneCollapsed={stageOneCollapsed}
 setStageOneCollapsed={setStageOneCollapsed}
 />
+)}
+
+{showStageOne && matchedCalibration && (
 <StageTwoCalibrationTest
 filteredData={filteredData}
-criticalParameters={criticalParameters}
-finalParameters={finalMatchedParameters}
-hardwareKeys={hardwareKeys}
-mappedHardwareParameters={mappedHardwareParameters}
+calibrationData={matchedCalibration}
+serialNumber={serialNumber}
 stageTwoCollapsed={stageTwoCollapsed}
 setStageTwoCollapsed={setStageTwoCollapsed}
 />
-<StageThreeAccuracyTest
-filteredData={filteredData}
-criticalParameters={criticalParameters}
-finalParameters={finalMatchedParameters}
-hardwareKeys={hardwareKeys}
-mappedHardwareParameters={mappedHardwareParameters}
-stageThreeCollapsed={stageThreeCollapsed}
-setStageThreeCollapsed={setStageThreeCollapsed}
-/>
-<StagefourNicTest
-filteredData={filteredData}
-criticalParameters={criticalParameters}
-finalParameters={finalMatchedParameters}
-hardwareKeys={hardwareKeys}
-mappedHardwareParameters={mappedHardwareParameters}
-stagefourCollapsed={stagefourCollapsed}
-setStagefourCollapsed={setStagefourCollapsed}
-/>
-<StagefiveFinalTest
-filteredData={filteredData}
-criticalParameters={criticalParameters}
-finalParameters={finalMatchedParameters}
-hardwareKeys={hardwareKeys}
-mappedHardwareParameters={mappedHardwareParameters}
-stagefiveCollapsed={stagefiveCollapsed}
-setStagefiveCollapsed={setStagefiveCollapsed}
-/>
-</>
 )}
 </div>
 );
