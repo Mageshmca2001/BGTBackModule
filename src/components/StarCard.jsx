@@ -1,77 +1,38 @@
-import React, { useEffect, useState } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { FaSun, FaBriefcase, FaMoon, FaCalendarAlt, FaCalendarWeek, FaCalendar } from 'react-icons/fa';
 
-// Animates only changed digits
-const AnimatedDigit = ({ digit, uniqueKey }) => (
-<motion.span
-key={uniqueKey}
-initial={{ opacity: 0, y: 10 }}
-animate={{ opacity: 1, y: 0 }}
-exit={{ opacity: 0, y: -10 }}
-transition={{ duration: 0.2 }}
-className="inline-block"
->
-{digit}
-</motion.span>
-);
-
-// Splits number into animated digits, only animating the changed ones
-const AnimatedValue = ({ value }) => {
-const [prevDigits, setPrevDigits] = useState(String(value).split(''));
-
-useEffect(() => {
-const newDigits = String(value).split('');
-if (newDigits.join('') !== prevDigits.join('')) {
-setPrevDigits(newDigits);
-}
-}, [value]);
-
-const currentDigits = String(value).split('');
-
-return (
-<span className="inline-flex">
-{currentDigits.map((digit, index) => (
-<AnimatePresence key={index} mode="wait">
-<AnimatedDigit
-digit={digit}
-uniqueKey={digit !== prevDigits[index] ? `${digit}-${index}` : `static-${index}`}
-/>
-</AnimatePresence>
-))}
-</span>
-);
+const iconMap = {
+sun: <FaSun className="text-white text-4xl drop-shadow-lg" />,
+briefcase: <FaBriefcase className="text-white text-4xl drop-shadow-lg" />,
+moon: <FaMoon className="text-white text-4xl drop-shadow-lg" />,
+calendar: <FaCalendar className="text-white text-4xl drop-shadow-lg" />,
+calendarAlt: <FaCalendarAlt className="text-white text-4xl drop-shadow-lg" />,
+calendarWeek: <FaCalendarWeek className="text-white text-4xl drop-shadow-lg" />,
 };
 
-const StarCard = ({ bgColor, icon, title, value, tested, completed }) => {
-const [prevTested, setPrevTested] = useState(tested);
-const [prevCompleted, setPrevCompleted] = useState(completed);
-
-useEffect(() => {
-if (tested !== prevTested) setPrevTested(tested);
-if (completed !== prevCompleted) setPrevCompleted(completed);
-}, [tested, completed]);
-
+const StarCard = ({
+total = 0,
+completed = 0,
+bgColor = 'from-blue-500 to-blue-700',
+icon = 'sun',
+title = 'Shift',
+}) => {
 return (
-<div className={`relative ${bgColor} p-4 md:p-6 rounded-lg shadow-xl hover:scale-105 transform transition duration-300 ease-in-out font-poppins`}>
-<div className="absolute top-4 right-4">
-<i className={`bx ${icon} text-black text-4xl md:text-6xl opacity-40`}></i>
-</div>
-
+<div
+className={`p-6 rounded-3xl bg-gradient-to-br ${bgColor} text-white shadow-2xl transition-all duration-300 transform hover:scale-105 hover:shadow-[0_10px_30px_rgba(0,0,0,0.4)]`}
+>
+<div className="flex justify-between items-center mb-4">
 <div>
-<h2 className="text-lg md:text-xl font-bold text-white">{value}</h2>
-<p className="text-base md:text-lg font-semibold text-white">{title}</p>
+<p className="text-4xl font-bold drop-shadow-sm">{total}</p>
+<p className="text-lg font-semibold opacity-90">{title}</p>
 </div>
-
-<div className="container mx-auto p-4">
-<div className="mt-4 flex flex-wrap justify-center gap-2">
-{/* <div className="bg-orange-500/100 border-white border-[1px] text-white text-xs font-semibold w-60 h-10 rounded-lg shadow-lg flex items-center justify-center">
-Tested:&nbsp;<AnimatedValue value={tested} />
-</div> */}
-
-<div className="bg-green-600/100 border-white border-[1px] text-white text-xs font-semibold w-60 h-10 rounded-lg shadow-lg flex items-center justify-center">
-Completed:&nbsp;<AnimatedValue value={completed} />
+<div className="bg-white/20 p-4 rounded-full shadow-inner backdrop-blur-sm">
+{iconMap[icon]}
 </div>
 </div>
+<div className="mt-4">
+<span className="inline-block bg-green-600 text-white font-semibold text-sm px-4 py-2 rounded shadow-md hover:bg-green-600 transition">
+Completed: {completed}
+</span>
 </div>
 </div>
 );

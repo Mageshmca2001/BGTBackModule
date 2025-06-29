@@ -116,23 +116,23 @@ datasets: [
 {
 label: 'Meters Tested',
 data: tested,
-backgroundColor: 'rgba(249, 115, 22, 1)',
-borderColor: '#000',
-borderWidth: 1,
+backgroundColor: '#60a5fa',  // soft blue
+borderColor: '#3b82f6',
+borderWidth: 1
 },
 {
 label: 'Meters Completed',
 data: completed,
-backgroundColor: 'rgba(22, 163, 74, 1)',
-borderColor: '#000',
-borderWidth: 1,
+backgroundColor: '#34d399',  // mint green
+borderColor: '#10b981',
+borderWidth: 1
 },
 {
 label: 'Meters Reworked',
 data: reworked,
-backgroundColor: '	rgba(239, 68, 68, 1)',
-borderColor: '#000',
-borderWidth: 1,
+backgroundColor: '#fca5a5',  // rose
+borderColor: '#f87171',
+borderWidth: 1
 }
 ]
 },
@@ -144,9 +144,12 @@ legend: { position: 'top' },
 title: {
 display: true,
 text: 'Meter Testing Analysis by Hours',
-color: '#555555',
-font: { size: 14, weight: 'bold' },
+color: '#334155',
+font: { size: 16, weight: 'bold' },
 padding: { top: 10, bottom: 10 }
+},
+datalabels: {
+display: false
 }
 },
 scales: {
@@ -155,14 +158,14 @@ beginAtZero: true,
 title: {
 display: true,
 text: 'Number of Meters',
-color: '#333'
+color: '#4b5563'
 }
 },
 x: {
 title: {
 display: true,
 text: 'Hours',
-color: '#333'
+color: '#4b5563'
 },
 stacked: false,
 grid: {
@@ -172,7 +175,6 @@ display: false
 }
 }
 });
-
 }, [filteredData]);
 
 const totalTested = filteredData.reduce((acc, item) => acc + (parseInt(item.tested) || 0), 0);
@@ -228,8 +230,6 @@ className="bg-green-600 text-white px-4 py-2 rounded mt-6 hover:bg-gray-400 w-fu
 </div>
 </div>
 
-
-{/* Table Section */}
 <div className="bg-primary text-white font-[poppins] p-4 rounded-t mt-4">Daily Report</div>
 <div className="bg-white p-4 rounded-b shadow-md">
 <div className="flex flex-col md:flex-row justify-between items-center mb-4 space-y-4 md:space-y-0">
@@ -291,7 +291,6 @@ onChange={handleSearchChange}
 </div>
 )}
 
-{/* Pagination */}
 <div className="flex justify-between items-center mt-4">
 <span className="text-sm text-gray-700">
 Showing {Math.min((currentPage - 1) * itemsPerPage + 1, filteredData.length)} to{' '}
@@ -327,13 +326,11 @@ Next
 </div>
 </div>
 </div>
-{/* Chart and Summary */}
+
 {filteredData.length > 0 && (
 <div className="bg-white p-4 mt-6 border-t pt-6 rounded shadow-md w-full overflow-hidden">
 <h2 className="text-2xl font-bold font-[poppins] mb-1 text-primary">Daily Report Chart</h2>
-<p className="text-gray-500 text-sm font-[poppins] mb-2">
-Daily analysis of meter testing
-</p>
+<p className="text-gray-500 text-sm font-[poppins] mb-2">Daily analysis of meter testing</p>
 <div className="relative w-full h-[500px]">
 <canvas ref={chartRef} className="absolute top-0 left-0 w-full h-full" />
 </div>
@@ -341,7 +338,7 @@ Daily analysis of meter testing
 <div className="mt-4">
 <h2 className="text-xl font-bold text-primary font-[poppins] mb-2">Total Summary</h2>
 <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-center font-[poppins]">
-<div className="bg-orange-100 text-orange-800 p-4 rounded shadow">
+<div className="bg-blue-100 text-blue-800 p-4 rounded shadow">
 <p className="text-lg font-semibold">Total Tested</p>
 <p className="text-2xl font-bold mt-0">{totalTested}</p>
 </div>
@@ -360,4 +357,5 @@ Daily analysis of meter testing
 </div>
 );
 };
+
 export default Daily;
