@@ -4,200 +4,200 @@ import axios from 'axios';
 import Chart from 'chart.js/auto';
 
 const Monthly = () => {
-  const [selectedMonth, setSelectedMonth] = useState('');
-  const [selectedYear, setSelectedYear] = useState('');
-  const [entries, setEntries] = useState('10');
-  const [search, setSearch] = useState('');
-  const [filteredData, setFilteredData] = useState([]);
-  const [data, setData] = useState([]);
-  const [currentPage, setCurrentPage] = useState(1);
-  const [itemsPerPage, setItemsPerPage] = useState(10);
-  const [dateTime, setDateTime] = useState(new Date());
-  const [loading, setLoading] = useState(false);
+const [selectedMonth, setSelectedMonth] = useState('');
+const [selectedYear, setSelectedYear] = useState('');
+const [entries, setEntries] = useState('10');
+const [search, setSearch] = useState('');
+const [filteredData, setFilteredData] = useState([]);
+const [data, setData] = useState([]);
+const [currentPage, setCurrentPage] = useState(1);
+const [itemsPerPage, setItemsPerPage] = useState(10);
+const [dateTime, setDateTime] = useState(new Date());
+const [loading, setLoading] = useState(false);
 
-  const chartRef = useRef(null);
-  const chartInstanceRef = useRef(null);
+const chartRef = useRef(null);
+const chartInstanceRef = useRef(null);
 
-  useEffect(() => {
-    document.title = 'BGT - Monthly Report';
-  }, []);
+useEffect(() => {
+document.title = 'BGT - Monthly Report';
+}, []);
 
-  useEffect(() => {
-    const interval = setInterval(() => setDateTime(new Date()), 1000);
-    return () => clearInterval(interval);
-  }, []);
+useEffect(() => {
+const interval = setInterval(() => setDateTime(new Date()), 1000);
+return () => clearInterval(interval);
+}, []);
 
-  const formattedDate = dateTime.toLocaleDateString('en-GB', {
-    day: '2-digit', month: '2-digit', year: 'numeric'
-  });
-  const formattedTime = dateTime.toLocaleTimeString();
+const formattedDate = dateTime.toLocaleDateString('en-GB', {
+day: '2-digit', month: '2-digit', year: 'numeric'
+});
+const formattedTime = dateTime.toLocaleTimeString();
 
-  const totalPages = Math.ceil(filteredData.length / itemsPerPage);
+const totalPages = Math.ceil(filteredData.length / itemsPerPage);
 
-  const handleMonthChange = (e) => setSelectedMonth(e.target.value);
-  const handleYearChange = (e) => setSelectedYear(e.target.value);
+const handleMonthChange = (e) => setSelectedMonth(e.target.value);
+const handleYearChange = (e) => setSelectedYear(e.target.value);
 
-  const handleEntriesChange = (e) => {
-    const value = e.target.value;
-    setEntries(value);
-    const length = value === 'All' ? filteredData.length || data.length : parseInt(value, 10);
-    setItemsPerPage(length);
-    setCurrentPage(1);
-  };
+const handleEntriesChange = (e) => {
+const value = e.target.value;
+setEntries(value);
+const length = value === 'All' ? filteredData.length || data.length : parseInt(value, 10);
+setItemsPerPage(length);
+setCurrentPage(1);
+};
 
-  const handleSearchChange = (e) => {
-    const searchValue = e.target.value.toLowerCase();
-    setSearch(searchValue);
-    const filtered = data.filter((item) =>
-      (item.date && item.date.toLowerCase().includes(searchValue)) ||
-      (item.tested && item.tested.toString().includes(searchValue)) ||
-      (item.completed && item.completed.toString().includes(searchValue)) ||
-      (item.reworked && item.reworked.toString().includes(searchValue))
-    );
-    setFilteredData(filtered);
-    setCurrentPage(1);
-  };
+const handleSearchChange = (e) => {
+const searchValue = e.target.value.toLowerCase();
+setSearch(searchValue);
+const filtered = data.filter((item) =>
+(item.date && item.date.toLowerCase().includes(searchValue)) ||
+(item.tested && item.tested.toString().includes(searchValue)) ||
+(item.completed && item.completed.toString().includes(searchValue)) ||
+(item.reworked && item.reworked.toString().includes(searchValue))
+);
+setFilteredData(filtered);
+setCurrentPage(1);
+};
 
-  const handleGenerateReport = async () => {
-    if (!selectedMonth || !selectedYear) {
-      alert('Please select both month and year to generate the report.');
-      return;
-    }
+const handleGenerateReport = async () => {
+if (!selectedMonth || !selectedYear) {
+alert('Please select both month and year to generate the report.');
+return;
+}
 
-    try {
-      setLoading(true);
-      const response = await axios.get("https://frontend-2-vt1l.onrender.com/admin");
-      let result = response.data.filter((item) => item.date);
+try {
+setLoading(true);
+const response = await axios.get("https://frontend-2-vt1l.onrender.com/admin");
+let result = response.data.filter((item) => item.date);
 
-      result = result.filter((item) => {
-        const [day, month, year] = item.date.split('.');
-        return month === selectedMonth && year === selectedYear;
-      });
+result = result.filter((item) => {
+const [day, month, year] = item.date.split('.');
+return month === selectedMonth && year === selectedYear;
+});
 
-      if (entries === 'All') {
-        setItemsPerPage(result.length);
-      }
+if (entries === 'All') {
+setItemsPerPage(result.length);
+}
 
-      setData(result);
-      setFilteredData(result);
-      setCurrentPage(1);
-    } catch (error) {
-      console.error("Error fetching report:", error);
-    } finally {
-      setLoading(false);
-    }
-  };
+setData(result);
+setFilteredData(result);
+setCurrentPage(1);
+} catch (error) {
+console.error("Error fetching report:", error);
+} finally {
+setLoading(false);
+}
+};
 
-  const handleExport = () => {
-    const worksheet = XLSX.utils.json_to_sheet(filteredData);
-    const workbook = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(workbook, worksheet, 'Meter Reports');
-    XLSX.writeFile(workbook, 'MeterReports.xlsx');
-  };
+const handleExport = () => {
+const worksheet = XLSX.utils.json_to_sheet(filteredData);
+const workbook = XLSX.utils.book_new();
+XLSX.utils.book_append_sheet(workbook, worksheet, 'Meter Reports');
+XLSX.writeFile(workbook, 'MeterReports.xlsx');
+};
 
-  const handlePageChange = (page) => setCurrentPage(page);
+const handlePageChange = (page) => setCurrentPage(page);
 
-  const paginatedData = filteredData.slice(
-    (currentPage - 1) * itemsPerPage,
-    currentPage * itemsPerPage
-  );
+const paginatedData = filteredData.slice(
+(currentPage - 1) * itemsPerPage,
+currentPage * itemsPerPage
+);
 
-  // Chart setup with soft colors (Daily.jsx style)
-  useEffect(() => {
-    if (!chartRef.current || filteredData.length === 0) return;
+// Chart setup with soft colors (Daily.jsx style)
+useEffect(() => {
+if (!chartRef.current || filteredData.length === 0) return;
 
-    const ctx = chartRef.current.getContext('2d');
-    if (chartInstanceRef.current) {
-      chartInstanceRef.current.destroy();
-    }
+const ctx = chartRef.current.getContext('2d');
+if (chartInstanceRef.current) {
+chartInstanceRef.current.destroy();
+}
 
-    const labels = filteredData.map(item => item.date);
-    const tested = filteredData.map(item => item.tested);
-    const completed = filteredData.map(item => item.completed);
-    const reworked = filteredData.map(item => item.reworked);
+const labels = filteredData.map(item => item.date);
+const tested = filteredData.map(item => item.tested);
+const completed = filteredData.map(item => item.completed);
+const reworked = filteredData.map(item => item.reworked);
 
-    chartInstanceRef.current = new Chart(ctx, {
-      type: 'bar',
-      data: {
-        labels,
-        datasets: [
-          {
-            label: 'Meters Tested',
-            data: tested,
-            backgroundColor: '#60a5fa',  // soft blue
-            borderColor: '#3b82f6',
-            borderWidth: 1
-          },
-          {
-            label: 'Meters Completed',
-            data: completed,
-            backgroundColor: '#34d399',  // soft green
-            borderColor: '#10b981',
-            borderWidth: 1
-          },
-          {
-            label: 'Meters Reworked',
-            data: reworked,
-            backgroundColor: '#fca5a5',  // soft red
-            borderColor: '#f87171',
-            borderWidth: 1
-          }
-        ]
-      },
-      options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        layout: { padding: 10 },
-        plugins: {
-          legend: { position: 'top' },
-          title: {
-            display: true,
-            text: 'Monthly Meter Testing Analysis',
-            font: { size: 16, weight: 'bold' },
-            color: '#333',
-            padding: { top: 10, bottom: 10 }
-          },
-          datalabels: {
-            display: false
-          }
-        },
-        scales: {
-          y: {
-            beginAtZero: true,
-            title: { display: true, text: 'Number of Meters', color: '#333' }
-          },
-          x: {
-            title: { display: true, text: 'Date', color: '#333' },
-            ticks: {
-              maxRotation: 45,
-              minRotation: 0,
-              autoSkip: true,
-              maxTicksLimit: 12
-            }
-          }
-        }
-      }
-    });
-  }, [filteredData]);
+chartInstanceRef.current = new Chart(ctx, {
+type: 'bar',
+data: {
+labels,
+datasets: [
+{
+label: 'Meters Tested',
+data: tested,
+backgroundColor: '#60a5fa',  // soft blue
+borderColor: '#3b82f6',
+borderWidth: 1
+},
+{
+label: 'Meters Completed',
+data: completed,
+backgroundColor: '#34d399',  // soft green
+borderColor: '#10b981',
+borderWidth: 1
+},
+{
+label: 'Meters Reworked',
+data: reworked,
+backgroundColor: '#fca5a5',  // soft red
+borderColor: '#f87171',
+borderWidth: 1
+}
+]
+},
+options: {
+responsive: true,
+maintainAspectRatio: false,
+layout: { padding: 10 },
+plugins: {
+legend: { position: 'top' },
+title: {
+display: true,
+text: 'Monthly Meter Testing Analysis',
+font: { size: 16, weight: 'bold' },
+color: '#333',
+padding: { top: 10, bottom: 10 }
+},
+datalabels: {
+display: false
+}
+},
+scales: {
+y: {
+beginAtZero: true,
+title: { display: true, text: 'Number of Meters', color: '#333' }
+},
+x: {
+title: { display: true, text: 'Date', color: '#333' },
+ticks: {
+maxRotation: 45,
+minRotation: 0,
+autoSkip: true,
+maxTicksLimit: 12
+}
+}
+}
+}
+});
+}, [filteredData]);
 
-  // Resize listener
-  useEffect(() => {
-    const handleResize = () => {
-      chartInstanceRef.current?.resize();
-    };
-    window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
-  }, []);
+// Resize listener
+useEffect(() => {
+const handleResize = () => {
+chartInstanceRef.current?.resize();
+};
+window.addEventListener('resize', handleResize);
+return () => window.removeEventListener('resize', handleResize);
+}, []);
 
-  const totalTested = filteredData.reduce((acc, item) => acc + (parseInt(item.tested) || 0), 0);
-  const totalCompleted = filteredData.reduce((acc, item) => acc + (parseInt(item.completed) || 0), 0);
-  const totalReworked = filteredData.reduce((acc, item) => acc + (parseInt(item.reworked) || 0), 0);
+const totalTested = filteredData.reduce((acc, item) => acc + (parseInt(item.tested) || 0), 0);
+const totalCompleted = filteredData.reduce((acc, item) => acc + (parseInt(item.completed) || 0), 0);
+const totalReworked = filteredData.reduce((acc, item) => acc + (parseInt(item.reworked) || 0), 0);
 return (
 <div className="w-full overflow-x-hidden px-0 pb-10">
 <h1 className="text-3xl font-[poppins] text-primary">Monthly Report</h1>
 
 {/* Date & Time Display */}
-<div className="flex justify-end space-x-2 items-center mt-4">
+<div className="flex justify-end space-x-2 items-center mt-2">
 <p className="bg-primary text-white font-semibold w-60 h-10 rounded-lg shadow-lg flex items-center justify-center">
 Date: {formattedDate}
 </p>
@@ -210,7 +210,7 @@ Time: {formattedTime}
 <div className="bg-primary p-4 rounded shadow-md mt-4">
 <div className="flex flex-wrap md:flex-nowrap space-y-4 md:space-y-0 md:space-x-4">
 <div className="w-full md:w-auto">
-<label className="block text-xl text-white font-[poppins]">Select Month</label>
+<label className="block text-base1 text-white font-[poppins]">Select Month</label>
 <select
 className="border border-white rounded p-2 w-full sm:w-64 mt-2"
 value={selectedMonth}
@@ -226,7 +226,7 @@ onChange={handleMonthChange}
 </div>
 
 <div className="w-full md:w-auto">
-<label className="block text-xl text-white font-[poppins]">Select Year</label>
+<label className="block text-base1 text-white font-[poppins]">Select Year</label>
 <select
 className="border border-white rounded p-2 w-full sm:w-64 mt-2"
 value={selectedYear}
@@ -297,10 +297,10 @@ onChange={handleSearchChange}
 <table className="min-w-full bg-white table-auto">
 <thead>
 <tr>
-<th className="border text-center bg-primary text-white px-4 py-2">Date</th>
-<th className="border text-center bg-primary text-white px-4 py-2">Tested</th>
-<th className="border text-center bg-primary text-white px-4 py-2">Completed</th>
-<th className="border text-center bg-primary text-white px-4 py-2">Reworked</th>
+<th className="border text-center text-base bg-primary font-[poppins] text-white px-4 py-2">Date</th>
+<th className="border text-center text-base bg-primary font-[poppins] text-white px-4 py-2">Tested</th>
+<th className="border text-center text-base bg-primary font-[poppins] text-white px-4 py-2">Completed</th>
+<th className="border text-center text-base bg-primary font-[poppins] text-white px-4 py-2">Reworked</th>
 </tr>
 </thead>
 <tbody>

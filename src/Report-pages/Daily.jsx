@@ -185,11 +185,11 @@ return (
 <div className="w-full overflow-x-hidden px-0 pb-10">
 <h1 className="text-3xl font-[poppins] text-primary">Daily Report</h1>
 
-<div className="flex justify-end space-x-2 items-center mt-4">
-<p className="bg-primary text-white font-semibold w-60 h-10 rounded-lg shadow-lg flex items-center justify-center">
+<div className="flex justify-end space-x-2 items-center mt-2">
+<p className="bg-primary text-white font-[poppins] w-60 h-10 rounded-lg shadow-lg flex items-center justify-center">
 Date: {formattedDate}
 </p>
-<p className="bg-primary text-white font-semibold w-60 h-10 rounded-lg shadow-lg flex items-center justify-center">
+<p className="bg-primary text-white font-[poppins] w-60 h-10 rounded-lg shadow-lg flex items-center justify-center">
 Time: {formattedTime}
 </p>
 </div>
@@ -197,7 +197,7 @@ Time: {formattedTime}
 <div className="bg-primary p-4 rounded shadow-md mt-4">
 <div className="flex flex-wrap md:flex-nowrap space-y-4 md:space-y-0 md:space-x-4">
 <div className="w-full md:w-auto">
-<label htmlFor="selectDay" className="block text-xl text-white font-[poppins]">
+<label htmlFor="selectDay" className="block text-base1 text-white font-[poppins]">
 Select Day
 </label>
 <select
@@ -271,10 +271,10 @@ onChange={handleSearchChange}
 <table className="min-w-full bg-white table-auto">
 <thead>
 <tr>
-<th className="border text-center bg-primary text-white px-4 py-2">Hours</th>
-<th className="border text-center bg-primary text-white px-4 py-2">Tested</th>
-<th className="border text-center bg-primary text-white px-4 py-2">Completed</th>
-<th className="border text-center bg-primary text-white px-4 py-2">Reworked</th>
+<th className="border text-center text-base bg-primary font-[poppins] text-white px-4 py-2">Hours</th>
+<th className="border text-center text-base bg-primary font-[poppins] text-white px-4 py-2">Tested</th>
+<th className="border text-center text-base bg-primary font-[poppins] text-white px-4 py-2">Completed</th>
+<th className="border text-center text-base bg-primary font-[poppins] text-white px-4 py-2">Reworked</th>
 </tr>
 </thead>
 <tbody>
@@ -339,15 +339,15 @@ Next
 <h2 className="text-xl font-bold text-primary font-[poppins] mb-2">Total Summary</h2>
 <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-center font-[poppins]">
 <div className="bg-blue-100 text-blue-800 p-4 rounded shadow">
-<p className="text-lg font-semibold">Total Tested</p>
+<p className="text-lg font-[poppins]">Total Tested</p>
 <p className="text-2xl font-bold mt-0">{totalTested}</p>
 </div>
 <div className="bg-green-100 text-green-800 p-4 rounded shadow">
-<p className="text-lg font-semibold">Total Completed</p>
+<p className="text-lg font-[poppins]">Total Completed</p>
 <p className="text-2xl font-bold mt-0">{totalCompleted}</p>
 </div>
 <div className="bg-red-100 text-red-800 p-4 rounded shadow">
-<p className="text-lg font-semibold">Total Reworked</p>
+<p className="text-lg font-[poppins]">Total Reworked</p>
 <p className="text-2xl font-bold mt-0">{totalReworked}</p>
 </div>
 </div>

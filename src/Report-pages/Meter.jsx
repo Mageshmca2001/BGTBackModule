@@ -133,11 +133,11 @@ return (
 <h1 className="text-3xl font-[poppins] text-primary">Meters Reports</h1>
 
 {/* Date & Time Display */}
-<div className="flex justify-end space-x-2 items-center mt-4">
-<p className="bg-primary text-white font-semibold w-60 h-10 rounded-lg shadow-lg flex items-center justify-center">
+<div className="flex justify-end space-x-2 items-center mt-2">
+<p className="bg-primary text-white font-[poppins] w-60 h-10 rounded-lg shadow-lg flex items-center justify-center">
 Date: {formattedDate}
 </p>
-<p className="bg-primary text-white font-semibold w-60 h-10 rounded-lg shadow-lg flex items-center justify-center">
+<p className="bg-primary text-white font-[poppins] w-60 h-10 rounded-lg shadow-lg flex items-center justify-center">
 Time: {formattedTime}
 </p>
 </div>
@@ -146,7 +146,7 @@ Time: {formattedTime}
 <div className="bg-primary p-4 rounded shadow-md mt-4">
 <div className="flex flex-wrap md:flex-nowrap space-y-4 md:space-y-0 md:space-x-4">
 <div className="w-full md:w-auto">
-<label htmlFor="serialInput" className="block text-xl text-white font-semibold">
+<label htmlFor="serialInput" className="block text-base1 text-white font-[poppins]">
 Enter Serial Number
 </label>
 <input

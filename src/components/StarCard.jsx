@@ -30,9 +30,11 @@ className={`p-6 rounded-3xl bg-gradient-to-br ${bgColor} text-white shadow-2xl t
 </div>
 </div>
 <div className="mt-4">
-<span className="inline-block bg-green-600 text-white font-semibold text-sm px-4 py-2 rounded shadow-md hover:bg-green-600 transition">
-Completed: {completed}
+<span className="inline-block bg-green-500 text-white font-semibold text-sm px-4 py-2 rounded shadow-md hover:bg-teal-600 transition">
+  Completed: {completed}
 </span>
+
+
 </div>
 </div>
 );
