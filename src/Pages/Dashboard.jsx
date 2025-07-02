@@ -193,7 +193,8 @@ if (loading) return <LoadingDots />;
 if (error) return <div className="text-center text-red-600 mt-10 font-semibold font-poppins">Error: {error}</div>;
 
 return (
-<main className="flex-1 px-4 sm:px-6 md:px-2 pb-8 overflow-x-hidden font-poppins">
+<main className="flex-1 px-2 sm:px-4 md:px-2 pb-8 overflow-x-hidden font-poppins">
+
 {/* Header */}
 <div className="flex flex-col sm:flex-row justify-between sm:items-end space-y-4 sm:space-y-0 sm:space-x-4 p-2 mb-4">
 <div>
