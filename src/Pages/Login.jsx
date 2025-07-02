@@ -7,23 +7,13 @@ import '../css/Sidebar.css';
 import logoImage from '../assets/Bright.png';
 import bg from '../assets/Mac.jpg';
 
-// Loading dots animation
+// Loading animation
 const LoadingDots = () => (
-<div
-style={{
-display: 'flex',
-justifyContent: 'center',
-alignItems: 'center',
-height: '100vh',
-fontSize: '24px',
-fontFamily: 'Poppins, sans-serif',
-color: '#2563eb',
-}}
->
+<div className="flex justify-center items-center h-screen text-2xl text-blue-600 font-poppins">
 Loading
-<span className="dot">.</span>
-<span className="dot">.</span>
-<span className="dot">.</span>
+<span className="animate-bounce mx-1">.</span>
+<span className="animate-bounce mx-1 delay-150">.</span>
+<span className="animate-bounce mx-1 delay-300">.</span>
 </div>
 );
 

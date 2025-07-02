@@ -13,6 +13,9 @@ Title,
 Tooltip,
 Legend,
 } from 'chart.js';
+import { motion } from 'framer-motion';
+import Confetti from 'react-confetti';
+import { useWindowSize } from '@react-hook/window-size';
 import StarCard from '../components/StarCard';
 
 ChartJS.register(
@@ -31,10 +34,41 @@ ChartDataLabels
 const timeData = ['08:00', '10:00', '12:00', '14:00', '16:00', '18:00', '20:00', '22:00', '00:00', '02:00', '04:00', '06:00'];
 
 const LoadingDots = () => (
-<div className="flex justify-center items-center h-screen text-2xl font-poppins text-blue-600">
-Loading<span className="dot">.</span><span className="dot">.</span><span className="dot">.</span>
+<div className="flex justify-center items-center h-screen text-2xl text-blue-600 font-poppins">
+Loading
+<span className="animate-bounce mx-1">.</span>
+<span className="animate-bounce mx-1 delay-150">.</span>
+<span className="animate-bounce mx-1 delay-300">.</span>
 </div>
 );
+
+const containerVariants = {
+hidden: {},
+visible: {
+transition: {
+staggerChildren: 0.15,
+delayChildren: 0.1,
+},
+},
+};
+
+const popUpCardVariants = {
+hidden: {
+opacity: 0,
+scale: 0.8,
+y: 30,
+},
+visible: {
+opacity: 1,
+scale: 1,
+y: 0,
+transition: {
+type: 'spring',
+stiffness: 120,
+damping: 14,
+},
+},
+};
 
 const metricsData = {
 tested: [2000, 3500, 4500, 7000, 7000, 3000, 3500, 4500, 5000, 8000, 4000, 3000],
@@ -56,11 +90,7 @@ let end = new Date(start);
 end.setDate(end.getDate() + 6);
 if (end > lastDay) end = new Date(lastDay);
 
-weeks.push({
-from: new Date(start),
-to: new Date(end),
-});
-
+weeks.push({ from: new Date(start), to: new Date(end) });
 start.setDate(end.getDate() + 1);
 }
 
@@ -89,6 +119,9 @@ const [error, setError] = useState(null);
 const [selectedRange, setSelectedRange] = useState('Day');
 const [currentDate, setCurrentDate] = useState(new Date());
 const [redLineValue, setRedLineValue] = useState(5000);
+const [showCelebration, setShowCelebration] = useState(false);
+const [width, height] = useWindowSize();
+
 const { completed, reworked } = metricsData;
 
 const formattedDate = currentDate.toLocaleDateString('en-GB');
@@ -126,6 +159,16 @@ fetchData();
 const interval = setInterval(fetchData, 10000);
 return () => clearInterval(interval);
 }, []);
+
+// 🎉 Detect threshold achievement
+// useEffect(() => {
+// const reached = completed.some((value) => value >= redLineValue);
+// if (reached) {
+// setShowCelebration(true);
+// const timer = setTimeout(() => setShowCelebration(false), 5000);
+// return () => clearTimeout(timer);
+// }
+// }, [completed, redLineValue]);
 
 const barData = useMemo(() => ({
 labels: timeData,
@@ -189,12 +232,65 @@ borderWidth: 1,
 }],
 };
 
+// const pieOptions = {
+// responsive: true,
+// maintainAspectRatio: false,
+// plugins: {
+// legend: {
+// position: 'bottom',
+// labels: {
+// font: { size: 13 },
+// },
+// },
+// datalabels: {
+// display: true,
+// color: '#fff',
+// font: {
+// weight: 'bold',
+// size: 14,
+// },
+// },
+// },
+// elements: {
+// arc: {
+// borderWidth: 2,
+// },
+// },
+// };
+
+
+
 if (loading) return <LoadingDots />;
 if (error) return <div className="text-center text-red-600 mt-10 font-semibold font-poppins">Error: {error}</div>;
 
 return (
-<main className="flex-1 px-2 sm:px-4 md:px-2 pb-8 overflow-x-hidden font-poppins">
+<>
+{showCelebration && (
+<>
+{/* Left top corner */}
+<Confetti
+width={width}
+height={height}
+numberOfPieces={150}
+recycle={false}
+gravity={0.3}
+confettiSource={{ x: width * 0.05, y: 0, w: 10, h: 10 }}
+/>
 
+{/* Right top corner */}
+<Confetti
+width={width}
+height={height}
+numberOfPieces={150}
+recycle={false}
+gravity={0.3}
+confettiSource={{ x: width * 0.95, y: 0, w: 10, h: 10 }}
+/>
+</>
+)}
+
+
+<main className="flex-1 px-2 sm:px-4 md:px-2 pb-8 overflow-x-hidden font-poppins">
 {/* Header */}
 <div className="flex flex-col sm:flex-row justify-between sm:items-end space-y-4 sm:space-y-0 sm:space-x-4 p-2 mb-4">
 <div>
@@ -231,96 +327,124 @@ Time: {formattedTime}
 </div>
 </div>
 
-{/* Cards Section */}
-<section className="bg-white rounded-lg shadow-lg p-4 md:p-6 mt-2">
-{selectedRange === 'Day' && (
-<div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
-<StarCard {...data?.presentDay} bgColor="from-sky-400 to-sky-600" icon="sun" title="Present Day" />
-<StarCard {...data?.presentDay} bgColor="from-purple-400 to-purple-600" icon="briefcase" title="Shift 1" />
-<StarCard {...data?.presentDay} bgColor="from-yellow-400 to-yellow-600" icon="sun" title="Shift 2" />
-<StarCard {...data?.presentDay} bgColor="from-indigo-400 to-indigo-600" icon="moon" title="Shift 3" />
-</div>
-)}
+<section className="bg-white rounded-2xl shadow-lg p-6 mb-6 transition-all">
+{['Day', 'Week', 'Month', 'Year'].includes(selectedRange) && (
+<motion.div
+className={`grid gap-4 ${
+selectedRange === 'Year'
+? 'grid-cols-1 sm:grid-cols-2'
+: selectedRange === 'Week'
+? 'grid-cols-1 sm:grid-cols-2 md:grid-cols-5'
+: 'grid-cols-1 sm:grid-cols-2 md:grid-cols-4'
+}`}
+variants={containerVariants}
+initial="hidden"
+animate="visible"
+>
+{selectedRange === 'Day' &&
+['Present Day', 'Shift 1', 'Shift 2', 'Shift 3'].map((title, i) => (
+<motion.div
+key={i}
+variants={popUpCardVariants}
+whileHover={{ scale: 1.05 }}
+>
+<StarCard
+{...data?.presentDay}
+bgColor={[
+'from-sky-400 to-sky-600',
+'from-purple-400 to-purple-600',
+'from-yellow-400 to-yellow-600',
+'from-indigo-400 to-indigo-600',
+][i]}
+icon={['sun', 'briefcase', 'sun', 'moon'][i]}
+title={title}
+/>
+</motion.div>
+))}
 
-{selectedRange === 'Week' && (
-<div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-5 gap-4">
-{getWeeklyRangesOfMonth().map((label, i) => {
-const colors = [
+{selectedRange === 'Week' &&
+getWeeklyRangesOfMonth().map((label, i) => (
+<motion.div
+key={i}
+variants={popUpCardVariants}
+whileHover={{ scale: 1.05 }}
+>
+<StarCard
+{...weeklyData[i] || { total: 0, completed: 0 }}
+bgColor={[
 'from-sky-400 to-sky-600',
 'from-purple-400 to-purple-600',
 'from-yellow-400 to-yellow-600',
 'from-indigo-400 to-indigo-600',
 'from-pink-400 to-pink-600',
-];
-const color = colors[i % colors.length];
-return (
-<StarCard
-key={i}
-{...weeklyData[i] || { total: 0, completed: 0 }}
-bgColor={color}
+][i % 5]}
 icon="calendarWeek"
 title={`Week ${i + 1}: ${label}`}
 />
-);
-})}
-</div>
-)}
+</motion.div>
+))}
 
-{selectedRange === 'Month' && (
-<div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
-{Array.from({ length: 4 }).map((_, i) => {
-const monthLabel = getMonthRangeLabel(i);
-const staticData = {
-total: 4000 + i * 500,
-completed: 3000 + i * 400,
-};
-const colors = [
+{selectedRange === 'Month' &&
+Array.from({ length: 4 }).map((_, i) => (
+<motion.div
+key={i}
+variants={popUpCardVariants}
+whileHover={{ scale: 1.05 }}
+>
+<StarCard
+{...{ total: 4000 + i * 500, completed: 3000 + i * 400 }}
+bgColor={[
 'from-sky-400 to-sky-600',
 'from-purple-400 to-purple-600',
 'from-yellow-400 to-yellow-600',
 'from-indigo-400 to-indigo-600',
-];
-const color = colors[i % colors.length];
-return (
-<StarCard
-key={i}
-{...staticData}
-bgColor={color}
+][i]}
 icon="calendar"
-title={`Month: ${monthLabel}`}
+title={`Month: ${getMonthRangeLabel(i)}`}
 />
-);
-})}
-</div>
-)}
+</motion.div>
+))}
 
-{selectedRange === 'Year' && (
-<div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-<StarCard {...data?.presentYear} bgColor="from-red-500 to-red-700" icon="calendarAlt" title={`This Year: ${getYearLabel(0)}`} />
-<StarCard {...data?.previousYear} bgColor="from-gray-500 to-gray-700" icon="calendarAlt" title={`Previous Year: ${getYearLabel(1)}`} />
-</div>
+{selectedRange === 'Year' &&
+['presentYear', 'previousYear'].map((key, i) => (
+<motion.div
+key={i}
+variants={popUpCardVariants}
+whileHover={{ scale: 1.05 }}
+>
+<StarCard
+{...data?.[key]}
+bgColor={['from-red-500 to-red-700', 'from-gray-500 to-gray-700'][i]}
+icon="calendarAlt"
+title={`${i === 0 ? 'This Year' : 'Previous Year'}: ${getYearLabel(i)}`}
+/>
+</motion.div>
+))}
+</motion.div>
 )}
 </section>
 
+
 {/* Chart Section */}
-<section className="bg-white rounded-lg shadow-lg p-6 mt-4">
-<h2 className="text-xl sm:text-2xl text-gray-700 font-bold text-center mb-6">Meter Testing Analysis Dashboard</h2>
+<section className="bg-white rounded-2xl shadow-lg p-6 mt-4">
+<h2 className="text-2xl font-bold text-center text-gray-800 mb-6">Meter Testing Insights</h2>
 <div className="grid grid-cols-1 md:grid-cols-5 gap-6">
-<div className="md:col-span-1 bg-white p-4 rounded-xl shadow hover:shadow-xl transition">
-<h3 className="text-lg font-semibold mb-2">Status Distribution</h3>
-<div className="h-[250px] sm:h-[300px]">
+<div className="md:col-span-1 p-4 rounded-xl bg-gray-50 hover:bg-white transition shadow">
+<h3 className="text-lg font-semibold text-gray-700 mb-4">Status Pie</h3>
+<div className="h-[250px]">
 <Pie data={pieData} options={chartOptions} />
 </div>
 </div>
-<div className="md:col-span-4 bg-white p-4 rounded-xl shadow hover:shadow-xl transition">
-<h3 className="text-lg font-semibold mb-2">Hourly Progress</h3>
-<div className="h-[250px] sm:h-[300px]">
+<div className="md:col-span-4 p-4 rounded-xl bg-gray-50 hover:bg-white transition shadow">
+<h3 className="text-lg font-semibold text-gray-700 mb-4">Hourly Progress</h3>
+<div className="h-[250px]">
 <Bar data={barData} options={chartOptions} />
 </div>
 </div>
 </div>
 </section>
 </main>
+</>
 );
 };
 
