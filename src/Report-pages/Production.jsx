@@ -3,6 +3,9 @@ import axios from 'axios';
 import { toBinary } from '../utils/binary';
 
 const Production = () => {
+// Maintenance Mode Toggle
+const maintenanceMode = true; // Change to false to show full app
+
 const [finalParameters, setFinalParameters] = useState([]);
 const [finalMatchedParameters, setFinalMatchedParameters] = useState(null);
 const [filteredData, setFilteredData] = useState([]);
@@ -13,23 +16,16 @@ const [selectedLine, setSelectedLine] = useState('');
 const [selectedBench, setSelectedBench] = useState('');
 const [selectedNIC, setSelectedNIC] = useState('');
 const [showStageOne, setShowStageOne] = useState(false);
-// const [matchedCalibration, setMatchedCalibration] = useState(null);
-
-// const hardwareKeys = [
-// 'LCD', 'LED', 'Relay', 'EEPROM', 'Flash', 'Scroll',
-// 'Coveropen', 'Magnet', 'TerminalCoveropen', 'NIC_CoMM',
-// 'Reverse', 'Neutral', 'NeutralDisturbance', 'Earth',
-// 'RTC_Battery', 'Backup_Battery'
-// ];
+const [matchedCalibration, setMatchedCalibration] = useState(null);
 
 useEffect(() => {
 document.title = 'BGT - Meter Report';
 
+if (!maintenanceMode) {
 const fetchData = async () => {
 try {
 const res = await axios.get('http://localhost:5000/user/parameters');
 const responseData = res.data;
-
 setFilteredData(responseData?.data || []);
 setFinalParameters(responseData?.finalParameters || []);
 setCalibrationData(responseData?.calibration || []);
@@ -39,7 +35,8 @@ console.error('❌ API Fetch Error:', error);
 };
 
 fetchData();
-}, []);
+}
+}, [maintenanceMode]);
 
 useEffect(() => {
 const interval = setInterval(() => setDateTime(new Date()), 1000);
@@ -83,19 +80,17 @@ const handleExport = () => {
 console.log('📤 Exporting data:', filteredData);
 };
 
-let binaryHardwareStatus = '';
-let mappedHardwareParameters = {};
-
-// if (finalMatchedParameters?.HardwareStatus) {
-// binaryHardwareStatus = toBinary(Number(finalMatchedParameters.HardwareStatus));
-// hardwareKeys.forEach((key, index) => {
-// const bit = binaryHardwareStatus[binaryHardwareStatus.length - 1 - index];
-// mappedHardwareParameters[key] = bit === '1' ? 'OK' : 'NOT OK';
-// });
-// }
-
 return (
 <div className="w-full overflow-x-hidden px-0 pb-10">
+{maintenanceMode ? (
+<div className="flex items-center justify-center min-h-[70vh] text-center">
+<div className="bg-yellow-100 text-yellow-800 border border-yellow-300 p-8 rounded-lg shadow">
+<h2 className="text-2xl font-semibold mb-2">⚠️ Currently Under Maintenance</h2>
+<p className="text-gray-700">We are working to improve your experience. Please check back later.</p>
+</div>
+</div>
+) : (
+<>
 <h1 className="text-3xl font-[poppins] text-primary">Production Line</h1>
 
 <div className="flex justify-end space-x-2 items-center mt-3">
@@ -165,7 +160,6 @@ className="flex items-center justify-center space-x-2 bg-green-600 text-white px
 <span>Export</span>
 </button>
 </div>
-
 </div>
 </div>
 
@@ -184,13 +178,15 @@ OK
 </div>
 )}
 
-{/* Render reports conditionally */}
 {showStageOne && finalMatchedParameters && (
 <div className="mt-6">
-{/* You can import and render StageOneFunctionalTest, StageTwoCalibrationTest, etc. here */}
-<h2 className="text-2xl font-semibold text-green-700">Report Found for {selectedLine} {selectedBench} {selectedNIC}</h2>
-{/* Render details or subcomponents here */}
+<h2 className="text-2xl font-semibold text-green-700">
+Report Found for {selectedLine} {selectedBench} {selectedNIC}
+</h2>
+{/* Render your Stage components here */}
 </div>
+)}
+</>
 )}
 </div>
 );
