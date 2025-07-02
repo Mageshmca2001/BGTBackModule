@@ -221,10 +221,10 @@ className="border border-gray-300 rounded-lg px-3 py-2 w-full sm:w-32 text-sm"
 </div>
 </div>
 <div className="flex flex-col sm:flex-row gap-2">
-<div className="bg-primary text-white px-4 py-2 rounded-lg shadow text-center">
+<div className="bg-primary text-white px-4 py-2 text-base1 rounded-lg shadow text-center">
 Date: {formattedDate}
 </div>
-<div className="bg-primary text-white px-4 py-2 rounded-lg shadow text-center">
+<div className="bg-primary text-white px-4 py-2 text-base1 rounded-lg shadow text-center">
 Time: {formattedTime}
 </div>
 </div>

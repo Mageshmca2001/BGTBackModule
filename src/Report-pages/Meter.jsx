@@ -10,16 +10,13 @@ const [criticalParameters, setCriticalParameters] = useState({});
 const [finalParameters, setFinalParameters] = useState([]);
 const [finalMatchedParameters, setFinalMatchedParameters] = useState(null);
 const [matchedCalibration, setMatchedCalibration] = useState(null);
-
 const [serialNumber, setSerialNumber] = useState('');
 const [filteredData, setFilteredData] = useState([]);
 const [dateTime, setDateTime] = useState(new Date());
 const [notFoundMessage, setNotFoundMessage] = useState({ visible: false, message: '' });
 const [showStageOne, setShowStageOne] = useState(false);
-
 const [stageOneCollapsed, setStageOneCollapsed] = useState(true);
 const [stageTwoCollapsed, setStageTwoCollapsed] = useState(true);
-
 const [calibrationData, setCalibrationData] = useState([]);
 
 const hardwareKeys = [
@@ -34,26 +31,14 @@ document.title = 'BGT - Meter Report';
 
 const fetchData = async () => {
 try {
-const [
-dataRes, criticalRes, finalRes,
-nicTestRes, calibrationRes, accuracyTestRes, finalTestRes
-] = await Promise.all([
-axios.get('http://192.168.29.50:7000/api/data'),
-axios.get('http://192.168.29.50:7000/api/Criticalcomponents'),
-axios.get('http://192.168.29.50:7000/api/finalparameters'),
-axios.get('http://192.168.29.50:7000/api/NICTestJig'),
-axios.get('http://192.168.29.50:7000/api/Calibration'),
-axios.get('http://192.168.29.50:7000/api/AccuracyTest'),
-axios.get('http://192.168.29.50:7000/api/FinalTest')
-]);
+const res = await axios.get('http://localhost:5000/user/parameters');
+const responseData = res.data;
 
-console.log("✅ Calibration Response:", calibrationRes.data);
-
-setData(dataRes.data?.data || []);
-setFilteredData(dataRes.data?.data || []);
-setCriticalParameters(criticalRes.data?.criticalParameters?.[0] || {});
-setFinalParameters(finalRes.data?.finalParameters || []);
-setCalibrationData(calibrationRes.data?.Calibration || []); // ✅ <- your key!
+setData(responseData?.data || []);
+setFilteredData(responseData?.data || []);
+setCriticalParameters(responseData?.criticalParameters?.[0] || {});
+setFinalParameters(responseData?.finalParameters || []);
+setCalibrationData(responseData?.calibration || []);
 } catch (error) {
 console.error('❌ API Fetch Error:', error);
 }
@@ -80,24 +65,8 @@ setNotFoundMessage({ visible: false, message: '' });
 return;
 }
 
-const matched = finalParameters.find(
-p => p?.PCBSerialNumber?.trim().toLowerCase() === inputSN
-);
-
-console.log("🔍 Final Parameters:", finalParameters);
-console.log("🔍 Calibration Data:", calibrationData);
-console.log("🔍 Input SN:", inputSN);
-
-const matchedCalib = calibrationData.find(
-c => c?.PCBSerialNumber?.trim().toLowerCase() === inputSN
-);
-
-console.log("✅ Matched Final:", matched);
-console.log("✅ Matched Calibration:", matchedCalib);
-
-calibrationData.forEach(c => {
-console.log("📌 Comparing:", c.PCBSerialNumber?.trim().toLowerCase(), "vs", inputSN);
-});
+const matched = finalParameters.find(p => p?.PCBSerialNumber?.trim().toLowerCase() === inputSN);
+const matchedCalib = calibrationData.find(c => c?.PCBSerialNumber?.trim().toLowerCase() === inputSN);
 
 if (matched) {
 setFinalMatchedParameters(matched);
@@ -114,7 +83,6 @@ setNotFoundMessage({ visible: true, message: 'Serial Number was not found in rec
 
 const handleExport = () => {
 console.log('📤 Exporting data:', filteredData);
-// Implement export logic here if needed
 };
 
 let binaryHardwareStatus = '';
@@ -132,7 +100,6 @@ return (
 <div className="w-full overflow-x-hidden px-0 pb-10">
 <h1 className="text-3xl font-[poppins] text-primary">Meters Reports</h1>
 
-{/* Date & Time Display */}
 <div className="flex justify-end space-x-2 items-center mt-2">
 <p className="bg-primary text-white font-[poppins] w-60 h-10 rounded-lg shadow-lg flex items-center justify-center">
 Date: {formattedDate}
@@ -142,7 +109,6 @@ Time: {formattedTime}
 </p>
 </div>
 
-{/* Serial Number Input */}
 <div className="bg-primary p-4 rounded shadow-md mt-4">
 <div className="flex flex-wrap md:flex-nowrap space-y-4 md:space-y-0 md:space-x-4">
 <div className="w-full md:w-auto">
@@ -176,7 +142,6 @@ className="bg-green-600 text-white px-4 py-2 rounded mt-6 hover:bg-gray-400 w-fu
 </div>
 </div>
 
-{/* Error Message */}
 {notFoundMessage.visible && (
 <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
 <div className="bg-white rounded-lg shadow-lg p-6 w-full max-w-md text-center">
@@ -192,7 +157,6 @@ OK
 </div>
 )}
 
-{/* Test Stages */}
 {showStageOne && finalMatchedParameters && (
 <StageOneFunctionalTest
 filteredData={filteredData}

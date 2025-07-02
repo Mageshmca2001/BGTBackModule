@@ -23,7 +23,7 @@ setNotification({ visible: false, message: '', type: 'success' });
 const fetchUsers = useCallback(async () => {
 setLoading(true);
 try {
-const response = await fetch('http://192.168.29.50:4000/user/getUsers');
+const response = await fetch('http://localhost:3000/user/getusers');
 if (!response.ok) throw new Error('Network response was not ok');
 const data = await response.json();
 setUsers(data.users);
@@ -74,8 +74,8 @@ return;
 const userPayload = { username, password, role, status };
 
 const endpoint = editingUser
-? `http://192.168.29.50:4000/user/putusers`
-: `http://192.168.29.50:4000/user/addusers`;
+? `http://localhost:3000/user/putusers`
+: `http://localhost:3000/user/addusers`;
 
 try {
 const response = await fetch(endpoint, {
@@ -104,7 +104,7 @@ return;
 }
 
 const response = await fetch(
-`http://192.168.29.50:4000/user/deleteusers/${userToDelete.id}`,
+`http://localhost:3000/user/deleteusers/${userToDelete.id}`,
 { method: 'DELETE' }
 );
 

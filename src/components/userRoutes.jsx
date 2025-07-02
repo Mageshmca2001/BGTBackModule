@@ -190,6 +190,21 @@ className="flex items-center p-2 text-gray-800 rounded-lg hover:bg-white"
 
 </li>
 
+{/* Users */}
+{/* <li>
+<Link
+to="/group1"
+className="flex items-center p-3 text-white rounded-lg hover:bg-gray-200 group"
+>
+<i className="bx bx-group text-xl text-white group-hover:text-black flex-shrink-0"></i>
+{isOpen && (
+<span className="nav-text ml-3 text-white group-hover:text-black font-['Poppins'] truncate">
+Production Lines
+</span>
+)}
+</Link>
+</li> */}
+
 {/* Configuration Category */}
 {/* {isOpen && (
 <li className="px-3 py-1 mt-4 text-base font-semibold text-white uppercase select-none">

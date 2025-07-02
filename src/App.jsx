@@ -14,6 +14,7 @@ import AdMeterReports from "./Adminboard/MeterReport";
 import Userinfo from "./Adminboard/User";
 import AdTestjig from "./Adminboard/TestJig";
 import AdProduction from "./Adminboard/BGTProduction";
+// import UserProduction from "./Usersboard/BGTProduction";
 
 const App = () => {
 return (
@@ -37,6 +38,7 @@ return (
 <Route path="/userpages/Daily" element={<UserDailyReports />} />
 <Route path="/userpages/Monthly" element={<UserMonReports />} />
 <Route path="/userpages/Meter" element={<UserMeterReports />} />
+{/* <Route path="/group1" element={<UserProduction />} /> */}
 </Route>
 </Routes>
 </BrowserRouter>
