@@ -89,7 +89,6 @@ while (start <= lastDay) {
 let end = new Date(start);
 end.setDate(end.getDate() + 6);
 if (end > lastDay) end = new Date(lastDay);
-
 weeks.push({ from: new Date(start), to: new Date(end) });
 start.setDate(end.getDate() + 1);
 }
@@ -123,7 +122,6 @@ const [showCelebration, setShowCelebration] = useState(false);
 const [width, height] = useWindowSize();
 
 const { completed, reworked } = metricsData;
-
 const formattedDate = currentDate.toLocaleDateString('en-GB');
 const formattedTime = currentDate.toLocaleTimeString();
 const monthWeeks = getWeeklyRangesOfMonth();
@@ -160,15 +158,16 @@ const interval = setInterval(fetchData, 10000);
 return () => clearInterval(interval);
 }, []);
 
-// 🎉 Detect threshold achievement
-// useEffect(() => {
-// const reached = completed.some((value) => value >= redLineValue);
-// if (reached) {
-// setShowCelebration(true);
-// const timer = setTimeout(() => setShowCelebration(false), 5000);
-// return () => clearTimeout(timer);
-// }
-// }, [completed, redLineValue]);
+// 🥳 Trigger celebration if threshold reached and > 0
+useEffect(() => {
+if (redLineValue <= 0) return;
+const reached = completed.some((value) => value >= redLineValue);
+if (reached) {
+setShowCelebration(true);
+const timer = setTimeout(() => setShowCelebration(false), 5000);
+return () => clearTimeout(timer);
+}
+}, [completed, redLineValue]);
 
 const barData = useMemo(() => ({
 labels: timeData,
@@ -232,62 +231,33 @@ borderWidth: 1,
 }],
 };
 
-// const pieOptions = {
-// responsive: true,
-// maintainAspectRatio: false,
-// plugins: {
-// legend: {
-// position: 'bottom',
-// labels: {
-// font: { size: 13 },
-// },
-// },
-// datalabels: {
-// display: true,
-// color: '#fff',
-// font: {
-// weight: 'bold',
-// size: 14,
-// },
-// },
-// },
-// elements: {
-// arc: {
-// borderWidth: 2,
-// },
-// },
-// };
-
-
-
 if (loading) return <LoadingDots />;
 if (error) return <div className="text-center text-red-600 mt-10 font-semibold font-poppins">Error: {error}</div>;
 
 return (
 <>
-{showCelebration && (
+{/* {showCelebration && (
 <>
-{/* Left top corner */}
 <Confetti
 width={width}
 height={height}
 numberOfPieces={150}
 recycle={false}
 gravity={0.3}
-confettiSource={{ x: width * 0.05, y: 0, w: 10, h: 10 }}
+initialVelocityY={10}
+confettiSource={{ x: 0, y: 0, w: 10, h: 10 }}
 />
+<Confetti
+width={width}
+height={height}
+numberOfPieces={150}
+recycle={false}
+gravity={0.3}
+initialVelocityY={10}
+confettiSource={{ x: width - 10, y: 0, w: 10, h: 10 }}
+/>
+</> */}
 
-{/* Right top corner */}
-<Confetti
-width={width}
-height={height}
-numberOfPieces={150}
-recycle={false}
-gravity={0.3}
-confettiSource={{ x: width * 0.95, y: 0, w: 10, h: 10 }}
-/>
-</>
-)}
 
 
 <main className="flex-1 px-2 sm:px-4 md:px-2 pb-8 overflow-x-hidden font-poppins">
@@ -296,11 +266,7 @@ confettiSource={{ x: width * 0.95, y: 0, w: 10, h: 10 }}
 <div>
 <h1 className="text-2xl sm:text-3xl text-primary font-[poppins]">Dashboard</h1>
 <div className="mt-3 sm:mt-4 flex flex-col sm:flex-row gap-3 sm:items-end">
-<select
-value={selectedRange}
-onChange={(e) => setSelectedRange(e.target.value)}
-className="border border-gray-300 rounded-lg px-3 py-2 text-base w-full sm:w-36"
->
+<select value={selectedRange} onChange={(e) => setSelectedRange(e.target.value)} className="border border-gray-300 rounded-lg px-3 py-2 text-base w-full sm:w-36">
 <option value="Day">Day</option>
 <option value="Week">Week</option>
 <option value="Month">Month</option>
@@ -318,25 +284,16 @@ className="border border-gray-300 rounded-lg px-3 py-2 w-full sm:w-32 text-sm"
 </div>
 </div>
 <div className="flex flex-col sm:flex-row gap-2">
-<div className="bg-primary text-white px-4 py-2 text-base1 rounded-lg shadow text-center">
-Date: {formattedDate}
-</div>
-<div className="bg-primary text-white px-4 py-2 text-base1 rounded-lg shadow text-center">
-Time: {formattedTime}
-</div>
+<div className="bg-primary text-white px-4 py-2 text-base1 rounded-lg shadow text-center">Date: {formattedDate}</div>
+<div className="bg-primary text-white px-4 py-2 text-base1 rounded-lg shadow text-center">Time: {formattedTime}</div>
 </div>
 </div>
 
+{/* Cards */}
 <section className="bg-white rounded-2xl shadow-lg p-6 mb-6 transition-all">
 {['Day', 'Week', 'Month', 'Year'].includes(selectedRange) && (
 <motion.div
-className={`grid gap-4 ${
-selectedRange === 'Year'
-? 'grid-cols-1 sm:grid-cols-2'
-: selectedRange === 'Week'
-? 'grid-cols-1 sm:grid-cols-2 md:grid-cols-5'
-: 'grid-cols-1 sm:grid-cols-2 md:grid-cols-4'
-}`}
+className={`grid gap-4 ${selectedRange === 'Year' ? 'grid-cols-1 sm:grid-cols-2' : selectedRange === 'Week' ? 'grid-cols-1 sm:grid-cols-2 md:grid-cols-5' : 'grid-cols-1 sm:grid-cols-2 md:grid-cols-4'}`}
 variants={containerVariants}
 initial="hidden"
 animate="visible"
@@ -424,22 +381,17 @@ title={`${i === 0 ? 'This Year' : 'Previous Year'}: ${getYearLabel(i)}`}
 )}
 </section>
 
-
-{/* Chart Section */}
+{/* Charts */}
 <section className="bg-white rounded-2xl shadow-lg p-6 mt-4">
-<h2 className="text-2xl font-bold text-center text-gray-800 mb-6">Meter Testing Insights</h2>
+<h2 className="text-2xl font-bold text-center text-gray-700 mb-6">Meter Analysis Dashboard</h2>
 <div className="grid grid-cols-1 md:grid-cols-5 gap-6">
 <div className="md:col-span-1 p-4 rounded-xl bg-gray-50 hover:bg-white transition shadow">
 <h3 className="text-lg font-semibold text-gray-700 mb-4">Status Pie</h3>
-<div className="h-[250px]">
-<Pie data={pieData} options={chartOptions} />
-</div>
+<div className="h-[250px]"><Pie data={pieData} options={chartOptions} /></div>
 </div>
 <div className="md:col-span-4 p-4 rounded-xl bg-gray-50 hover:bg-white transition shadow">
 <h3 className="text-lg font-semibold text-gray-700 mb-4">Hourly Progress</h3>
-<div className="h-[250px]">
-<Bar data={barData} options={chartOptions} />
-</div>
+<div className="h-[250px]"><Bar data={barData} options={chartOptions} /></div>
 </div>
 </div>
 </section>

@@ -52,7 +52,7 @@ className="text-white text-2xl focus:outline-none mr-4"
 >
 <i className={`bx ${isOpen ? 'bx-chevron-left' : 'bx-chevron-right'}`}></i>
 </button>
-<h1 className="text-white text-base font-semibold font-['Poppins'] flex-1">
+<h1 className="text-white text-base font-['Poppins'] flex-1">
 Welcome to BGT MIS
 </h1>
 </div>

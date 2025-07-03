@@ -18,6 +18,9 @@ const [showStageOne, setShowStageOne] = useState(false);
 const [stageOneCollapsed, setStageOneCollapsed] = useState(true);
 const [stageTwoCollapsed, setStageTwoCollapsed] = useState(true);
 const [calibrationData, setCalibrationData] = useState([]);
+const [loading, setLoading] = useState(false);
+const isExportDisabled = filteredData.length === 0;
+
 
 const hardwareKeys = [
 'LCD', 'LED', 'Relay', 'EEPROM', 'Flash', 'Scroll',
@@ -65,6 +68,8 @@ setNotFoundMessage({ visible: false, message: '' });
 return;
 }
 
+setLoading(true); // Start loading
+setTimeout(() => {
 const matched = finalParameters.find(p => p?.PCBSerialNumber?.trim().toLowerCase() === inputSN);
 const matchedCalib = calibrationData.find(c => c?.PCBSerialNumber?.trim().toLowerCase() === inputSN);
 
@@ -79,7 +84,11 @@ setMatchedCalibration(null);
 setShowStageOne(false);
 setNotFoundMessage({ visible: true, message: 'Serial Number was not found in records.' });
 }
+
+setLoading(false); // Stop loading after 3 seconds
+}, 3000);
 };
+
 
 const handleExport = () => {
 console.log('📤 Exporting data:', filteredData);
@@ -132,12 +141,19 @@ className="bg-green-600 text-white px-4 py-2 rounded mt-6 hover:bg-gray-400 w-fu
 >
 <i className="bx bx-cog mr-2"></i> Generate
 </button>
+<span title={isExportDisabled ? 'Generate report first' : ''}>
 <button
 onClick={handleExport}
-className="bg-green-600 text-white px-4 py-2 rounded mt-6 hover:bg-gray-400 w-full md:w-auto"
+disabled={isExportDisabled}
+className={`px-4 py-2 rounded mt-6 w-full md:w-auto ${
+isExportDisabled
+? 'bg-gray-400 cursor-not-allowed'
+: 'bg-green-600 hover:bg-gray-400 text-white'
+}`}
 >
 <i className="bx bxs-file-export mr-2"></i> Export
 </button>
+</span>
 </div>
 </div>
 </div>
@@ -156,7 +172,23 @@ OK
 </div>
 </div>
 )}
-
+{loading ? (
+<div className="flex flex-col justify-center items-center py-16 animate-fadeIn">
+<div className="relative">
+<div className="w-16 h-16 rounded-full border-4 border-t-transparent border-b-transparent border-primary animate-spin"></div>
+<div className="absolute inset-0 flex justify-center items-center">
+<i className='bx bx-loader-alt text-4xl text-primary animate-pulse'></i>
+</div>
+</div>
+<p className="mt-4 text-lg text-primary font-[poppins] animate-pulse">
+Loading Meter Serial report...
+</p>
+<p className="text-sm text-gray-400 font-[poppins] mt-1">
+Please wait while we fetch the data.
+</p>
+</div>
+) : (
+<>
 {showStageOne && finalMatchedParameters && (
 <StageOneFunctionalTest
 filteredData={filteredData}
@@ -178,6 +210,9 @@ stageTwoCollapsed={stageTwoCollapsed}
 setStageTwoCollapsed={setStageTwoCollapsed}
 />
 )}
+</>
+)}
+
 </div>
 );
 };

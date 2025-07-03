@@ -66,12 +66,12 @@ let response;
 let usedEndpoint = '';
 
 try {
-response = await attemptLogin('http://localhost:3000/auth/login');
+response = await attemptLogin('http://localhost:5000/auth/login');
 usedEndpoint = 'auth';
 } catch (primaryError) {
 console.warn('Primary login failed, trying secondary...');
 try {
-response = await attemptLogin('http://localhost:3000/user/login');
+response = await attemptLogin('http://localhost:5000/user/login');
 usedEndpoint = 'user';
 } catch (secondaryError) {
 if (secondaryError.response?.status === 403) {
