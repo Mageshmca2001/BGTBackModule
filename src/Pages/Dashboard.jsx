@@ -14,7 +14,7 @@ Tooltip,
 Legend,
 } from 'chart.js';
 import { motion } from 'framer-motion';
-import Confetti from 'react-confetti';
+// import Confetti from 'react-confetti';
 import { useWindowSize } from '@react-hook/window-size';
 import StarCard from '../components/StarCard';
 
@@ -303,7 +303,7 @@ animate="visible"
 <motion.div
 key={i}
 variants={popUpCardVariants}
-whileHover={{ scale: 1.05 }}
+// whileHover={{ scale: 1.01 }}
 >
 <StarCard
 {...data?.presentDay}
@@ -324,7 +324,7 @@ getWeeklyRangesOfMonth().map((label, i) => (
 <motion.div
 key={i}
 variants={popUpCardVariants}
-whileHover={{ scale: 1.05 }}
+// whileHover={{ scale: 1.01 }}
 >
 <StarCard
 {...weeklyData[i] || { total: 0, completed: 0 }}
@@ -346,7 +346,7 @@ Array.from({ length: 4 }).map((_, i) => (
 <motion.div
 key={i}
 variants={popUpCardVariants}
-whileHover={{ scale: 1.05 }}
+// whileHover={{ scale: 1.01 }}
 >
 <StarCard
 {...{ total: 4000 + i * 500, completed: 3000 + i * 400 }}
@@ -367,7 +367,7 @@ title={`Month: ${getMonthRangeLabel(i)}`}
 <motion.div
 key={i}
 variants={popUpCardVariants}
-whileHover={{ scale: 1.05 }}
+// whileHover={{ scale: 1.01 }}
 >
 <StarCard
 {...data?.[key]}
