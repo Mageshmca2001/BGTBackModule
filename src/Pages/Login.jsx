@@ -59,6 +59,7 @@ setIsLoading(true);
 
 const attemptLogin = async (url) => {
 return await axios.post(url, { username, password });
+
 };
 
 try {
@@ -66,12 +67,12 @@ let response;
 let usedEndpoint = '';
 
 try {
-response = await attemptLogin('http://192.168.29.50:4000/auth/login');
+response = await attemptLogin('http://localhost:5000/auth/login');
 usedEndpoint = 'auth';
 } catch (primaryError) {
 console.warn('Primary login failed, trying secondary...');
 try {
-response = await attemptLogin('http://192.168.29.50:4000/user/login');
+response = await attemptLogin('http://localhost:5000/user/login');
 usedEndpoint = 'user';
 } catch (secondaryError) {
 if (secondaryError.response?.status === 403) {

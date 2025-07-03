@@ -72,8 +72,13 @@ setCurrentPage(1);
 };
 
 const handleGenerateReport = async () => {
-setLoading(true);
+if (!selectedDay) {
+alert('Please select Day to generate the report.');
+return;
+}
+
 try {
+setLoading(true);
 const response = await axios.get("https://frontend-1-lunu.onrender.com/admin");
 const fetchedData = response.data;
 

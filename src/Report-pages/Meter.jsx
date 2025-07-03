@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import axios from 'axios';
 import StageOneFunctionalTest from '../stagescom/FunctionaTest';
 import StageTwoCalibrationTest from '../stagescom/CalibartionTest';
@@ -19,8 +19,9 @@ const [stageOneCollapsed, setStageOneCollapsed] = useState(true);
 const [stageTwoCollapsed, setStageTwoCollapsed] = useState(true);
 const [calibrationData, setCalibrationData] = useState([]);
 const [loading, setLoading] = useState(false);
-const isExportDisabled = filteredData.length === 0;
+const maintenanceMode = true;
 
+const isExportDisabled = filteredData.length === 0;
 
 const hardwareKeys = [
 'LCD', 'LED', 'Relay', 'EEPROM', 'Flash', 'Scroll',
@@ -29,14 +30,10 @@ const hardwareKeys = [
 'RTC_Battery', 'Backup_Battery'
 ];
 
-useEffect(() => {
-document.title = 'BGT - Meter Report';
-
-const fetchData = async () => {
+const fetchData = useCallback(async () => {
 try {
 const res = await axios.get('http://localhost:5000/user/parameters');
 const responseData = res.data;
-
 setData(responseData?.data || []);
 setFilteredData(responseData?.data || []);
 setCriticalParameters(responseData?.criticalParameters?.[0] || {});
@@ -45,10 +42,14 @@ setCalibrationData(responseData?.calibration || []);
 } catch (error) {
 console.error('❌ API Fetch Error:', error);
 }
-};
-
-fetchData();
 }, []);
+
+useEffect(() => {
+document.title = 'BGT - Meter Report';
+if (!maintenanceMode) {
+fetchData();
+}
+}, [fetchData, maintenanceMode]);
 
 useEffect(() => {
 const interval = setInterval(() => setDateTime(new Date()), 1000);
@@ -60,7 +61,6 @@ const formattedTime = dateTime.toLocaleTimeString();
 
 const handleGenerateReport = () => {
 const inputSN = serialNumber.trim().toLowerCase();
-
 if (!inputSN) {
 alert('Please enter a serial number.');
 setShowStageOne(false);
@@ -68,7 +68,7 @@ setNotFoundMessage({ visible: false, message: '' });
 return;
 }
 
-setLoading(true); // Start loading
+setLoading(true);
 setTimeout(() => {
 const matched = finalParameters.find(p => p?.PCBSerialNumber?.trim().toLowerCase() === inputSN);
 const matchedCalib = calibrationData.find(c => c?.PCBSerialNumber?.trim().toLowerCase() === inputSN);
@@ -85,10 +85,9 @@ setShowStageOne(false);
 setNotFoundMessage({ visible: true, message: 'Serial Number was not found in records.' });
 }
 
-setLoading(false); // Stop loading after 3 seconds
+setLoading(false);
 }, 3000);
 };
-
 
 const handleExport = () => {
 console.log('📤 Exporting data:', filteredData);
@@ -105,6 +104,19 @@ mappedHardwareParameters[key] = bit === '1' ? 'OK' : 'NOT OK';
 });
 }
 
+// === Maintenance Mode UI ===
+if (maintenanceMode) {
+return (
+<div className="flex items-center justify-center min-h-[70vh] text-center">
+<div className="bg-yellow-100 text-yellow-800 border border-yellow-300 p-8 rounded-lg shadow">
+<h2 className="text-2xl font-semibold mb-2">⚠️ Currently Under Maintenance</h2>
+<p className="text-gray-700">We are working to improve your experience. Please check back later.</p>
+</div>
+</div>
+);
+}
+
+// === Main Page UI ===
 return (
 <div className="w-full overflow-x-hidden px-0 pb-10">
 <h1 className="text-3xl font-[poppins] text-primary">Meters Reports</h1>
