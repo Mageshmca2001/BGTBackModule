@@ -213,12 +213,10 @@ title: {
 display: true,
 text: 'Meter Testing Analysis by Hours',
 color: '#334155',
-font: { size: 16, weight: 'bold' },
+font: { size: 18, weight: 'bold', family: 'Poppins' },
 padding: { top: 10, bottom: 10 }
 },
-datalabels: {
-display: false  // 🚫 hides the numbers inside bars
-}
+datalabels: { display: false }
 },
 scales: {
 y: {
@@ -244,23 +242,23 @@ grid: { display: false }
 }, [filteredData]);
 
 return (
-<div className="w-full overflow-x-hidden px-0 pb-10">
+<div className="w-full overflow-x-hidden px-0 sm:px-0 pb-10">
 <h1 className="text-3xl font-[poppins] text-primary">Daily Report</h1>
 
 {/* Date & Time */}
-<div className="flex justify-end space-x-2 items-center mt-2">
-<p className="bg-primary text-white font-[poppins] w-60 h-10 rounded-lg shadow-lg flex items-center justify-center">
+<div className="flex flex-col sm:flex-row justify-end sm:space-x-4 mt-2 space-y-2 sm:space-y-0">
+<p className="bg-primary text-white font-[poppins] w-full sm:w-60 h-10 rounded-lg shadow-lg flex items-center justify-center">
 Date: {formattedDate}
 </p>
-<p className="bg-primary text-white font-[poppins] w-60 h-10 rounded-lg shadow-lg flex items-center justify-center">
+<p className="bg-primary text-white font-[poppins] w-full sm:w-60 h-10 rounded-lg shadow-lg flex items-center justify-center">
 Time: {formattedTime}
 </p>
 </div>
 
 {/* Filter Section */}
 <div className="bg-primary p-4 rounded shadow-md mt-4">
-<div className="flex flex-wrap md:flex-nowrap space-y-4 md:space-y-0 md:space-x-4">
-<div className="w-full md:w-auto">
+<div className="flex flex-col md:flex-row md:items-end gap-4">
+<div className="w-full md:w-1/2">
 <label htmlFor="selectDay" className="block text-base1 text-white font-[poppins]">
 Select Day
 </label>
@@ -322,7 +320,7 @@ Please wait while we fetch the data.
 ) : (
 <>
 {/* Entries & Search */}
-<div className="flex flex-col md:flex-row justify-between items-center mb-4 space-y-4 md:space-y-0 overflow-x-auto">
+<div className="flex flex-col md:flex-row justify-between items-center mb-4 space-y-4 md:space-y-0">
 <div className="flex items-center space-x-4 min-w-max">
 <label htmlFor="entries" className="text-gray-700 whitespace-nowrap">Show</label>
 <select
@@ -352,7 +350,7 @@ onChange={handleSearchChange}
 </div>
 
 {/* Table */}
-<div className="overflow-x-auto">
+<div className="overflow-x-auto w-full">
 <table className="min-w-full bg-white table-auto">
 <thead>
 <tr>
@@ -426,7 +424,7 @@ Next
 <div className="bg-white p-4 mt-6 border-t pt-6 rounded shadow-md w-full overflow-hidden">
 <h2 className="text-2xl font-bold font-[poppins] mb-1 text-primary">Daily Report Chart</h2>
 <p className="text-gray-500 text-sm font-[poppins] mb-2">Daily analysis of meter testing</p>
-<div className="relative w-full h-[500px]">
+<div className="relative w-full h-[300px] sm:h-[500px]">
 <canvas ref={chartRef} className="absolute top-0 left-0 w-full h-full" />
 </div>
 

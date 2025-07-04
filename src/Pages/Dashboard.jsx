@@ -13,7 +13,8 @@ Title,
 Tooltip,
 Legend,
 } from 'chart.js';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
+
 // import Confetti from 'react-confetti';
 import { useWindowSize } from '@react-hook/window-size';
 import StarCard from '../components/StarCard';
@@ -55,20 +56,38 @@ delayChildren: 0.1,
 const popUpCardVariants = {
 hidden: {
 opacity: 0,
+y: 50,
+rotateX: -90,
 scale: 0.8,
-y: 30,
+transition: {
+duration: 0.4,
+ease: 'easeOut',
+},
 },
 visible: {
 opacity: 1,
-scale: 1,
 y: 0,
+rotateX: 0,
+scale: 1,
 transition: {
 type: 'spring',
-stiffness: 120,
-damping: 14,
+stiffness: 100,
+damping: 12,
+},
+},
+exit: {
+opacity: 0,
+y: 50,
+rotateX: 90,
+scale: 0.8,
+transition: {
+duration: 0.3,
+ease: 'easeIn',
 },
 },
 };
+
+
 
 const metricsData = {
 tested: [2000, 3500, 4500, 7000, 7000, 3000, 3500, 4500, 5000, 8000, 4000, 3000],
@@ -231,6 +250,59 @@ borderWidth: 1,
 }],
 };
 
+
+const popUpCardVariants = {
+hidden: {
+opacity: 0,
+rotateX: -90,
+scale: 0.8,
+y: 50,
+transition: {
+duration: 0.4,
+ease: 'easeOut',
+},
+},
+visible: {
+opacity: 1,
+rotateX: 0,
+scale: 1,
+y: 0,
+transition: {
+type: 'spring',
+stiffness: 100,
+damping: 12,
+},
+},
+exit: {
+opacity: 0,
+rotateX: 90,
+scale: 0.8,
+y: -50,
+transition: {
+duration: 0.4,
+ease: 'easeInOut',
+},
+},
+};
+
+
+const containerVariants = {
+hidden: {
+opacity: 0,
+scale: 0.9,
+},
+visible: {
+opacity: 1,
+scale: 1,
+transition: {
+when: 'beforeChildren',
+staggerChildren: 0.2,
+delayChildren: 0.1,
+},
+},
+};
+
+
 if (loading) return <LoadingDots />;
 if (error) return <div className="text-center text-red-600 mt-10 font-semibold font-poppins">Error: {error}</div>;
 
@@ -290,20 +362,36 @@ className="border border-gray-300 rounded-lg px-3 py-2 w-full sm:w-32 text-sm"
 </div>
 
 {/* Cards */}
-<section className="bg-white rounded-2xl shadow-lg p-6 mb-6 transition-all">
+<section
+className="bg-white rounded-2xl shadow-lg p-6 mb-6 transition-all"
+style={{ perspective: '1500px' }} // Adds 3D rolling depth
+>
+
+<AnimatePresence mode="wait">
 {['Day', 'Week', 'Month', 'Year'].includes(selectedRange) && (
 <motion.div
-className={`grid gap-4 ${selectedRange === 'Year' ? 'grid-cols-1 sm:grid-cols-2' : selectedRange === 'Week' ? 'grid-cols-1 sm:grid-cols-2 md:grid-cols-5' : 'grid-cols-1 sm:grid-cols-2 md:grid-cols-4'}`}
+key={selectedRange}
+className={`grid gap-4 ${
+selectedRange === 'Year'
+? 'grid-cols-1 sm:grid-cols-2'
+: selectedRange === 'Week'
+? 'grid-cols-1 sm:grid-cols-2 md:grid-cols-5'
+: 'grid-cols-1 sm:grid-cols-2 md:grid-cols-4'
+}`}
 variants={containerVariants}
 initial="hidden"
 animate="visible"
+exit="hidden"
 >
+{/* DAY */}
 {selectedRange === 'Day' &&
 ['Present Day', 'Shift 1', 'Shift 2', 'Shift 3'].map((title, i) => (
 <motion.div
 key={i}
 variants={popUpCardVariants}
-// whileHover={{ scale: 1.01 }}
+initial="hidden"
+animate="visible"
+exit="exit"
 >
 <StarCard
 {...data?.presentDay}
@@ -319,15 +407,18 @@ title={title}
 </motion.div>
 ))}
 
+{/* WEEK */}
 {selectedRange === 'Week' &&
-getWeeklyRangesOfMonth().map((label, i) => (
+monthWeeks.map((label, i) => (
 <motion.div
 key={i}
 variants={popUpCardVariants}
-// whileHover={{ scale: 1.01 }}
+initial="hidden"
+animate="visible"
+exit="exit"
 >
 <StarCard
-{...weeklyData[i] || { total: 0, completed: 0 }}
+{...(weeklyData[i] || { total: 0, completed: 0 })}
 bgColor={[
 'from-sky-400 to-sky-600',
 'from-purple-400 to-purple-600',
@@ -341,12 +432,15 @@ title={`Week ${i + 1}: ${label}`}
 </motion.div>
 ))}
 
+{/* MONTH */}
 {selectedRange === 'Month' &&
 Array.from({ length: 4 }).map((_, i) => (
 <motion.div
 key={i}
 variants={popUpCardVariants}
-// whileHover={{ scale: 1.01 }}
+initial="hidden"
+animate="visible"
+exit="exit"
 >
 <StarCard
 {...{ total: 4000 + i * 500, completed: 3000 + i * 400 }}
@@ -362,12 +456,15 @@ title={`Month: ${getMonthRangeLabel(i)}`}
 </motion.div>
 ))}
 
+{/* YEAR */}
 {selectedRange === 'Year' &&
 ['presentYear', 'previousYear'].map((key, i) => (
 <motion.div
 key={i}
 variants={popUpCardVariants}
-// whileHover={{ scale: 1.01 }}
+initial="hidden"
+animate="visible"
+exit="exit"
 >
 <StarCard
 {...data?.[key]}
@@ -379,7 +476,10 @@ title={`${i === 0 ? 'This Year' : 'Previous Year'}: ${getYearLabel(i)}`}
 ))}
 </motion.div>
 )}
+</AnimatePresence>
 </section>
+
+
 
 {/* Charts */}
 <section className="bg-white rounded-2xl shadow-lg p-6 mt-4">

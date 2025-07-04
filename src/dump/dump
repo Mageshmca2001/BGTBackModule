@@ -1,32 +1,19 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect } from 'react';
 import axios from 'axios';
 import StageOneFunctionalTest from '../stagescom/FunctionaTest';
-import StageTwoCalibrationTest from '../stagescom/CalibartionTest';
-import StageThreeAccuracyTest from '../stagescom/AccuracyTest';
-import StageFourNICTest from '../stagescom/NICTest';
 import { toBinary } from '../utils/binary';
 
 const Meter = () => {
-const [filteredData, setFilteredData] = useState([]);
-const [functionalParameters, setFunctionalParameters] = useState([]);
-const [functionalMatchedParameters, setFunctionalMatchedParameters] = useState(null);
-const [CalibParameters, setCalibParameters] = useState([]);
-const [CalibMatchedParameters, setCalibMatchedParameters] = useState(null);
-const [AcParameters, setAcParameters] = useState([]);
-const [AcMatchedParameters, setAcMatchedParameters] = useState(null);
-const [NICParameters, setNICParameters] = useState([]);
-const [NICMatchedParameters, setNICMatchedParameters] = useState(null);
+const [finalMatchedParameters, setFinalMatchedParameters] = useState(null);
 const [serialNumber, setSerialNumber] = useState('');
+const [filteredData, setFilteredData] = useState([]);
 const [dateTime, setDateTime] = useState(new Date());
 const [notFoundMessage, setNotFoundMessage] = useState({ visible: false, message: '' });
 const [showStageOne, setShowStageOne] = useState(false);
 const [stageOneCollapsed, setStageOneCollapsed] = useState(true);
-const [stageTwoCollapsed, setStageTwoCollapsed] = useState(true);
-const [stageThreeCollapsed, setStageThreeCollapsed] = useState(true);
-const [stageFourCollapsed, setStageFourCollapsed] = useState(true);
 const [loading, setLoading] = useState(false);
-const [maintenanceMode, setMaintenanceMode] = useState(false);
 
+const maintenanceMode = false;
 const isExportDisabled = filteredData.length === 0;
 
 const hardwareKeys = [
@@ -36,77 +23,19 @@ const hardwareKeys = [
 'RTC_Battery', 'Backup_Battery'
 ];
 
-const fetchData = useCallback(async () => {
-try {
-const [functionalRes, calibrationRes, accuracyRes, nicRes] = await Promise.all([
-axios.get('http://localhost:5000/user/Functional'),
-axios.get('http://localhost:5000/user/Calibration'),
-axios.get('http://localhost:5000/user/Accuracy'),
-axios.get('http://localhost:5000/user/NIC')
-]);
-
-const allSuccessful =
-functionalRes.data?.users &&
-calibrationRes.data?.users &&
-accuracyRes.data?.users &&
-nicRes.data?.users;
-
-if (allSuccessful) {
-setFunctionalParameters(functionalRes.data.users);
-setCalibParameters(calibrationRes.data.users);
-setAcParameters(accuracyRes.data.users);
-setNICParameters(nicRes.data.users);
-setMaintenanceMode(false);
-} else {
-setMaintenanceMode(true);
-}
-} catch (error) {
-console.error('❌ API Fetch Error:', error);
-setMaintenanceMode(true);
-}
-}, []);
-
 useEffect(() => {
 document.title = 'BGT - Meter Report';
-let retryInterval;
-
-const initFetch = async () => {
-await fetchData();
-
-retryInterval = setInterval(async () => {
-if (maintenanceMode) {
-console.log("🔄 Retrying API fetch...");
-await fetchData();
-}
-}, 10000);
-};
-
-initFetch();
-
-return () => clearInterval(retryInterval);
-}, [fetchData, maintenanceMode]);
+}, []);
 
 useEffect(() => {
 const interval = setInterval(() => setDateTime(new Date()), 1000);
 return () => clearInterval(interval);
 }, []);
 
-useEffect(() => {
-if (!maintenanceMode) {
-setSerialNumber('');
-setFilteredData([]);
-setFunctionalMatchedParameters(null);
-setCalibMatchedParameters(null);
-setAcMatchedParameters(null);
-setNICMatchedParameters(null);
-setShowStageOne(false);
-}
-}, [maintenanceMode]);
-
 const formattedDate = dateTime.toLocaleDateString('en-GB');
 const formattedTime = dateTime.toLocaleTimeString();
 
-const handleGenerateReport = () => {
+const handleGenerateReport = async () => {
 const inputSN = serialNumber.trim().toLowerCase();
 if (!inputSN) {
 alert('Please enter a serial number.');
@@ -116,57 +45,62 @@ return;
 }
 
 setLoading(true);
+const startTime = Date.now();
+
+try {
+const res = await axios.get('http://localhost:5000/user/Functional', {
+params: { PCBSerialnumber: inputSN }
+});
+
+const elapsed = Date.now() - startTime;
+const remainingTime = Math.max(0, 3000 - elapsed); // Ensure 3s minimum
+
 setTimeout(() => {
-const matched = functionalParameters.find(
-(p) => p?.PCBSerialNumber?.trim().toLowerCase() === inputSN
+if (res.data && res.data.users && res.data.users.length > 0) {
+const matched = res.data.users.find(
+user => user.PCBSerialNumber.toLowerCase() === inputSN
 );
-const matchedcalib = CalibParameters.find(
-(c) => c?.PCBSerialNumber?.trim().toLowerCase() === inputSN
-);
-const matchedAc = AcParameters.find(
-  (A) => A?.PCBSerialNo?.trim().toLowerCase() === inputSN
-);
-const matchedNIC = NICParameters.find(
-(n) => n?.PCBSerialNumber?.trim().toLowerCase() === inputSN
-);
-
-console.log("🧪 Matched Functional:", matched);
-console.log("🧪 Matched Calibration:", matchedcalib);
-console.log("🧪 Matched Accuracy:", matchedAc);
-console.log("🧪 Matched NIC:", matchedNIC);
-
 if (matched) {
-setFunctionalMatchedParameters(matched);
-setCalibMatchedParameters(matchedcalib);
-setAcMatchedParameters(matchedAc);
-setNICMatchedParameters(matchedNIC);
-setFilteredData([matched, matchedcalib, matchedAc, matchedNIC]);
+setFinalMatchedParameters(matched);
+setFilteredData([matched]);
 setShowStageOne(true);
 setNotFoundMessage({ visible: false, message: '' });
 } else {
-setFunctionalMatchedParameters(null);
-setCalibMatchedParameters(null);
-setAcMatchedParameters(null);
-setNICMatchedParameters(null);
-setFilteredData([]);
+setFinalMatchedParameters(null);
 setShowStageOne(false);
-setNotFoundMessage({ visible: true, message: 'Serial Number was not found in records.' });
+setNotFoundMessage({ visible: true, message: 'Serial Number not found in records.' });
+}
+} else {
+setFinalMatchedParameters(null);
+setShowStageOne(false);
+setNotFoundMessage({ visible: true, message: 'No data found from API.' });
 }
 
 setLoading(false);
-}, 3000);
+}, remainingTime);
+} catch (error) {
+const elapsed = Date.now() - startTime;
+const remainingTime = Math.max(0, 3000 - elapsed);
+setTimeout(() => {
+setFinalMatchedParameters(null);
+setShowStageOne(false);
+setNotFoundMessage({ visible: true, message: 'Error fetching data from API.' });
+setLoading(false);
+}, remainingTime);
+}
 };
+
 
 const handleExport = () => {
 console.log('📤 Exporting data:', filteredData);
-// TODO: Implement Excel export
+// Add export to Excel logic if needed
 };
 
 let binaryHardwareStatus = '';
 let mappedHardwareParameters = {};
 
-if (functionalMatchedParameters?.HardwareStatus) {
-binaryHardwareStatus = toBinary(Number(functionalMatchedParameters.HardwareStatus));
+if (finalMatchedParameters?.HardwareStatus) {
+binaryHardwareStatus = toBinary(Number(finalMatchedParameters.HardwareStatus));
 hardwareKeys.forEach((key, index) => {
 const bit = binaryHardwareStatus[binaryHardwareStatus.length - 1 - index];
 mappedHardwareParameters[key] = bit === '1' ? 'OK' : 'NOT OK';
@@ -269,41 +203,14 @@ Please wait while we fetch the data.
 </div>
 ) : (
 <>
-{showStageOne && functionalMatchedParameters && (
+{showStageOne && finalMatchedParameters && (
 <StageOneFunctionalTest
 filteredData={filteredData}
-FunctionalParameters={functionalMatchedParameters}
+finalParameters={finalMatchedParameters}
 hardwareKeys={hardwareKeys}
 mappedHardwareParameters={mappedHardwareParameters}
 stageOneCollapsed={stageOneCollapsed}
 setStageOneCollapsed={setStageOneCollapsed}
-/>
-)}
-
-{showStageOne && CalibMatchedParameters && (
-<StageTwoCalibrationTest
-filteredData={filteredData}
-CalibParameters={CalibMatchedParameters}
-stageTwoCollapsed={stageTwoCollapsed}
-setStageTwoCollapsed={setStageTwoCollapsed}
-/>
-)}
-
-{showStageOne && AcMatchedParameters && (
-<StageThreeAccuracyTest
-filteredData={filteredData}
-AcParameters={AcMatchedParameters}
-stageThreeCollapsed={stageThreeCollapsed}
-setStageThreeCollapsed={setStageThreeCollapsed}
-/>
-)}
-
-{showStageOne && NICMatchedParameters && (
-<StageFourNICTest
-filteredData={filteredData}
-NICParameters={NICMatchedParameters}
-stageFourCollapsed={stageFourCollapsed}
-setStageFourCollapsed={setStageFourCollapsed}
 />
 )}
 </>
