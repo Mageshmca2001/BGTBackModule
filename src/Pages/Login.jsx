@@ -29,6 +29,8 @@ const [showInactiveModal, setShowInactiveModal] = useState(false);
 
 const navigate = useNavigate();
 
+const API_BASE = import.meta.env.VITE_API;
+
 useEffect(() => {
 document.title = 'BGT - Login';
 const timer = setTimeout(() => setIsPageLoading(false), 800);
@@ -45,6 +47,10 @@ setRememberMe(true);
 return () => clearTimeout(timer);
 }, []);
 
+const attemptLogin = async (url) => {
+return await axios.post(url, { username, password });
+};
+
 const handleLogin = async (e) => {
 e.preventDefault();
 setErrors({ username: '', password: '' });
@@ -57,22 +63,17 @@ return;
 
 setIsLoading(true);
 
-const attemptLogin = async (url) => {
-return await axios.post(url, { username, password });
-
-};
-
 try {
 let response;
 let usedEndpoint = '';
 
 try {
-response = await attemptLogin('http://http://192.168.29.50:4000/auth/login');
+response = await attemptLogin(`${API_BASE}/auth/login`);
 usedEndpoint = 'auth';
 } catch (primaryError) {
 console.warn('Primary login failed, trying secondary...');
 try {
-response = await attemptLogin('http://http://192.168.29.50:4000//user/login');
+response = await attemptLogin(`${API_BASE}/user/login`);
 usedEndpoint = 'user';
 } catch (secondaryError) {
 if (secondaryError.response?.status === 403) {
@@ -101,7 +102,7 @@ Cookies.set('userRole', safeUserRole);
 
 if (rememberMe) {
 Cookies.set('loginName', username);
-Cookies.set('loginPassword', password); // Dev only
+Cookies.set('loginPassword', password); // ⚠️ Only for dev/testing!
 } else {
 Cookies.remove('loginName');
 Cookies.remove('loginPassword');
