@@ -184,8 +184,8 @@ datasets: [
 {
 label: 'Meters Tested',
 data: tested,
-backgroundColor: '#60a5fa',
-borderColor: '#3b82f6',
+backgroundColor: '#a78bfa',  // light purple
+borderColor: '#7c3aed',
 borderWidth: 1
 },
 {
@@ -198,8 +198,8 @@ borderWidth: 1
 {
 label: 'Meters Reworked',
 data: reworked,
-backgroundColor: '#fca5a5',
-borderColor: '#f87171',
+backgroundColor: '#f472b6',  // pink/magenta
+borderColor: '#db2777', 
 borderWidth: 1
 }
 ]
@@ -431,7 +431,7 @@ Next
 <div className="mt-4">
 <h2 className="text-xl font-bold text-primary font-[poppins] mb-2">Total Summary</h2>
 <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-center font-[poppins]">
-<div className="bg-blue-100 text-blue-800 p-4 rounded shadow">
+<div className="bg-purple-100 text-purple-800 p-4 rounded shadow">
 <p className="text-lg">Total Tested</p>
 <p className="text-2xl font-bold mt-0">{totalTested}</p>
 </div>
@@ -439,7 +439,7 @@ Next
 <p className="text-lg">Total Completed</p>
 <p className="text-2xl font-bold mt-0">{totalCompleted}</p>
 </div>
-<div className="bg-red-100 text-red-800 p-4 rounded shadow">
+<div className="bg-magenta-200 text-magenta-900 p-4 rounded shadow">
 <p className="text-lg">Total Reworked</p>
 <p className="text-2xl font-bold mt-0">{totalReworked}</p>
 </div>

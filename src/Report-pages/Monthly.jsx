@@ -180,22 +180,22 @@ datasets: [
 {
 label: 'Meters Tested',
 data: tested,
-backgroundColor: '#60a5fa',  // soft blue
-borderColor: '#3b82f6',
+backgroundColor: '#a78bfa',  // light purple
+borderColor: '#7c3aed',
 borderWidth: 1
 },
 {
 label: 'Meters Completed',
 data: completed,
-backgroundColor: '#34d399',  // soft green
+backgroundColor: '#34d399',
 borderColor: '#10b981',
 borderWidth: 1
 },
 {
 label: 'Meters Reworked',
 data: reworked,
-backgroundColor: '#fca5a5',  // soft red
-borderColor: '#f87171',
+backgroundColor: '#f472b6',  // pink/magenta
+borderColor: '#db2777', 
 borderWidth: 1
 }
 ]
@@ -446,14 +446,14 @@ Next
 <div className="bg-white p-4 mt-6 border-t pt-6 rounded shadow-md w-full overflow-hidden">
 <h2 className="text-2xl font-bold font-[poppins] mb-1 text-primary">Monthly Report Chart</h2>
 <p className="text-gray-500 text-sm font-[poppins] mb-2">Monthly analysis of meter testing</p>
-<div className="relative w-full h-[500px]">
+<div className="relative w-full h-[300px] sm:h-[500px]">
 <canvas ref={chartRef} className="absolute top-0 left-0 w-full h-full" />
 </div>
 
 <div className="mt-4">
 <h2 className="text-xl font-bold text-primary font-[poppins] mb-2">Total Summary</h2>
 <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-center font-[poppins]">
-<div className="bg-blue-100 text-blue-800 p-4 rounded shadow">
+<div className="bg-purple-100 text-purple-800 p-4 rounded shadow">
 <p className="text-lg">Total Tested</p>
 <p className="text-2xl font-bold mt-0">{totalTested}</p>
 </div>
@@ -461,7 +461,7 @@ Next
 <p className="text-lg">Total Completed</p>
 <p className="text-2xl font-bold mt-0">{totalCompleted}</p>
 </div>
-<div className="bg-red-100 text-red-800 p-4 rounded shadow">
+<div className="bg-magenta-200 text-magenta-900 p-4 rounded shadow">
 <p className="text-lg">Total Reworked</p>
 <p className="text-2xl font-bold mt-0">{totalReworked}</p>
 </div>

@@ -27,14 +27,14 @@ onClick={() => setStagefiveCollapsed(!stagefiveCollapsed)}
 {!stagefiveCollapsed && (
 <div className="bg-white p-4 rounded-b shadow-md">
 {/* User Details */}
-<div className="bg-primary text-white font-[poppins] p-4 rounded-t">
+<div className="bg-primary text-white p-3 sm:p-4 rounded-t mt-6 text-sm sm:text-base">
 User Details
 </div>
 <div className="overflow-x-auto space-y-6 mt-2">
 {filteredData.length > 0 ? (
 filteredData.map((item, index) => (
 <div key={index} className="overflow-x-auto">
-<table className="min-w-full table-fixed border border-gray-500 rounded text-sm sm:text-base">
+<table className="min-w-full table-auto border border-gray-500 rounded text-xs sm:text-sm mb-4">
 <thead className="bg-gray-200">
 <tr>
 <th className="border border-gray-500 px-2 sm:px-4 py-2 text-left w-1/2">Users Key</th>

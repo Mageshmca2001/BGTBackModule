@@ -22,11 +22,11 @@ onClick={() => setStageOneCollapsed(!stageOneCollapsed)}
 {!stageOneCollapsed && (
 <div className="bg-white p-4 rounded-b shadow-md">
 {/* Functional Parameters */}
-<div className="bg-primary text-white p-3 sm:p-4 rounded-t mt-6 text-sm sm:text-base">
+<div className="bg-primary text-white p-3 sm:p-4 rounded-t mt-4 text-sm sm:text-base">
 Functional Parameters
 </div>
 <div className="overflow-x-auto">
-<table className="min-w-full table-auto border border-gray-500 rounded text-xs sm:text-sm mb-6">
+<table className="min-w-full table-auto border border-gray-500 rounded text-xs sm:text-sm mb-4">
 <thead className="bg-gray-200">
 <tr>
 <th className="border border-gray-500 px-2 py-2 text-left whitespace-nowrap">Functional Key</th>
@@ -65,7 +65,7 @@ return (
 Hardware Status
 </div>
 <div className="overflow-x-auto">
-<table className="min-w-full table-auto border border-gray-500 rounded text-xs sm:text-sm mb-6">
+<table className="min-w-full table-auto border border-gray-500 rounded text-xs sm:text-sm mb-4">
 <thead className="bg-gray-200">
 <tr>
 <th className="border border-gray-500 px-2 py-2 text-left whitespace-nowrap">

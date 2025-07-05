@@ -22,11 +22,11 @@ onClick={() => setStageFourCollapsed(!stageFourCollapsed)}
 {/* User Details */}
 
 {/* NIC Test Parameters */}
-<div className="bg-primary text-white font-[poppins] p-4 rounded-t mt-8">
+<div className="bg-primary text-white p-3 sm:p-4 rounded-t mt-4 text-sm sm:text-base">
 NIC Parameters
 </div>
 <div className="overflow-x-auto">
-<table className="min-w-full table-auto border border-gray-500 rounded text-xs sm:text-sm mb-6">
+<table className="min-w-full table-auto border border-gray-500 rounded text-xs sm:text-sm mb-4">
 <thead className="bg-gray-200">
 <tr>
 <th className="border border-gray-500 px-2 py-2 text-left whitespace-nowrap">NIC Key</th>

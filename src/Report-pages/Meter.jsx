@@ -6,6 +6,8 @@ import StageThreeAccuracyTest from '../stagescom/AccuracyTest';
 import StageFourNICTest from '../stagescom/NICTest';
 import { toBinary } from '../utils/binary';
 
+const API_BASE = import.meta.env.VITE_API;
+
 const Meter = () => {
 const [filteredData, setFilteredData] = useState([]);
 const [functionalParameters, setFunctionalParameters] = useState([]);
@@ -19,7 +21,6 @@ const [NICMatchedParameters, setNICMatchedParameters] = useState(null);
 const [serialNumber, setSerialNumber] = useState('');
 const [dateTime, setDateTime] = useState(new Date());
 const [notFoundMessage, setNotFoundMessage] = useState({ visible: false, message: '' });
-const [showStageOne, setShowStageOne] = useState(false);
 const [stageOneCollapsed, setStageOneCollapsed] = useState(true);
 const [stageTwoCollapsed, setStageTwoCollapsed] = useState(true);
 const [stageThreeCollapsed, setStageThreeCollapsed] = useState(true);
@@ -37,51 +38,68 @@ const hardwareKeys = [
 ];
 
 const fetchData = useCallback(async () => {
+let isFunctionalOk = false;
+let isCalibrationOk = false;
+let isAccuracyOk = false;
+let isNICOk = false;
+
 try {
-const [functionalRes, calibrationRes, accuracyRes, nicRes] = await Promise.all([
-axios.get('http://localhost:5000/user/Functional'),
-axios.get('http://localhost:5000/user/Calibration'),
-axios.get('http://localhost:5000/user/Accuracy'),
-axios.get('http://localhost:5000/user/NIC')
-]);
-
-const allSuccessful =
-functionalRes.data?.users &&
-calibrationRes.data?.users &&
-accuracyRes.data?.users &&
-nicRes.data?.users;
-
-if (allSuccessful) {
-setFunctionalParameters(functionalRes.data.users);
-setCalibParameters(calibrationRes.data.users);
-setAcParameters(accuracyRes.data.users);
-setNICParameters(nicRes.data.users);
-setMaintenanceMode(false);
-} else {
-setMaintenanceMode(true);
+const res = await axios.get(`${API_BASE}/user/Functional`);
+if (Array.isArray(res.data?.users)) {
+setFunctionalParameters(res.data.users);
+isFunctionalOk = true;
 }
-} catch (error) {
-console.error('❌ API Fetch Error:', error);
-setMaintenanceMode(true);
+} catch (err) {
+console.error('❌ Functional API Error:', err);
 }
+
+try {
+const res = await axios.get(`${API_BASE}/user/Calibration`);
+if (Array.isArray(res.data?.users)) {
+setCalibParameters(res.data.users);
+isCalibrationOk = true;
+}
+} catch (err) {
+console.error('❌ Calibration API Error:', err);
+}
+
+try {
+const res = await axios.get(`${API_BASE}/user/Accuracy`);
+if (Array.isArray(res.data?.users)) {
+setAcParameters(res.data.users);
+isAccuracyOk = true;
+}
+} catch (err) {
+console.error('❌ Accuracy API Error:', err);
+}
+
+try {
+const res = await axios.get(`${API_BASE}/user/NIC`);
+if (Array.isArray(res.data?.users)) {
+setNICParameters(res.data.users);
+isNICOk = true;
+}
+} catch (err) {
+console.error('❌ NIC API Error:', err);
+}
+
+const allFailed = !isFunctionalOk && !isCalibrationOk && !isAccuracyOk && !isNICOk;
+setMaintenanceMode(allFailed);
 }, []);
+
 
 useEffect(() => {
 document.title = 'BGT - Meter Report';
-let retryInterval;
-
 const initFetch = async () => {
 await fetchData();
-
-retryInterval = setInterval(async () => {
-if (maintenanceMode) {
-console.log("🔄 Retrying API fetch...");
-await fetchData();
-}
-}, 10000);
 };
 
 initFetch();
+const retryInterval = setInterval(() => {
+if (maintenanceMode) {
+fetchData();
+}
+}, 10000);
 
 return () => clearInterval(retryInterval);
 }, [fetchData, maintenanceMode]);
@@ -99,18 +117,23 @@ setFunctionalMatchedParameters(null);
 setCalibMatchedParameters(null);
 setAcMatchedParameters(null);
 setNICMatchedParameters(null);
-setShowStageOne(false);
 }
 }, [maintenanceMode]);
+
+// Optional: Disable right click for UX security
+useEffect(() => {
+const handleContextMenu = (e) => e.preventDefault();
+document.addEventListener('contextmenu', handleContextMenu);
+return () => document.removeEventListener('contextmenu', handleContextMenu);
+}, []);
 
 const formattedDate = dateTime.toLocaleDateString('en-GB');
 const formattedTime = dateTime.toLocaleTimeString();
 
 const handleGenerateReport = () => {
-const inputSN = serialNumber.trim().toLowerCase();
-if (!inputSN) {
-alert('Please enter a serial number.');
-setShowStageOne(false);
+let inputSN = serialNumber.trim().toLowerCase().replace(/[^a-z0-9]/gi, '');
+if (!inputSN || inputSN.length < 5) {
+alert('Please enter a valid serial number (min 5 alphanumeric characters).');
 setNotFoundMessage({ visible: false, message: '' });
 return;
 }
@@ -124,24 +147,20 @@ const matchedcalib = CalibParameters.find(
 (c) => c?.PCBSerialNumber?.trim().toLowerCase() === inputSN
 );
 const matchedAc = AcParameters.find(
-  (A) => A?.PCBSerialNo?.trim().toLowerCase() === inputSN
+(a) => a?.PCBSerialNo?.trim().toLowerCase() === inputSN
 );
 const matchedNIC = NICParameters.find(
 (n) => n?.PCBSerialNumber?.trim().toLowerCase() === inputSN
 );
 
-console.log("🧪 Matched Functional:", matched);
-console.log("🧪 Matched Calibration:", matchedcalib);
-console.log("🧪 Matched Accuracy:", matchedAc);
-console.log("🧪 Matched NIC:", matchedNIC);
+const anyMatched = matched || matchedcalib || matchedAc || matchedNIC;
 
-if (matched) {
-setFunctionalMatchedParameters(matched);
-setCalibMatchedParameters(matchedcalib);
-setAcMatchedParameters(matchedAc);
-setNICMatchedParameters(matchedNIC);
-setFilteredData([matched, matchedcalib, matchedAc, matchedNIC]);
-setShowStageOne(true);
+if (anyMatched) {
+setFunctionalMatchedParameters(matched || null);
+setCalibMatchedParameters(matchedcalib || null);
+setAcMatchedParameters(matchedAc || null);
+setNICMatchedParameters(matchedNIC || null);
+setFilteredData([matched, matchedcalib, matchedAc, matchedNIC].filter(Boolean));
 setNotFoundMessage({ visible: false, message: '' });
 } else {
 setFunctionalMatchedParameters(null);
@@ -149,7 +168,6 @@ setCalibMatchedParameters(null);
 setAcMatchedParameters(null);
 setNICMatchedParameters(null);
 setFilteredData([]);
-setShowStageOne(false);
 setNotFoundMessage({ visible: true, message: 'Serial Number was not found in records.' });
 }
 
@@ -159,7 +177,7 @@ setLoading(false);
 
 const handleExport = () => {
 console.log('📤 Exporting data:', filteredData);
-// TODO: Implement Excel export
+// TODO: Implement secure export logic
 };
 
 let binaryHardwareStatus = '';
@@ -269,7 +287,7 @@ Please wait while we fetch the data.
 </div>
 ) : (
 <>
-{showStageOne && functionalMatchedParameters && (
+{functionalMatchedParameters && (
 <StageOneFunctionalTest
 filteredData={filteredData}
 FunctionalParameters={functionalMatchedParameters}
@@ -280,7 +298,7 @@ setStageOneCollapsed={setStageOneCollapsed}
 />
 )}
 
-{showStageOne && CalibMatchedParameters && (
+{CalibMatchedParameters && (
 <StageTwoCalibrationTest
 filteredData={filteredData}
 CalibParameters={CalibMatchedParameters}
@@ -289,7 +307,7 @@ setStageTwoCollapsed={setStageTwoCollapsed}
 />
 )}
 
-{showStageOne && AcMatchedParameters && (
+{AcMatchedParameters && (
 <StageThreeAccuracyTest
 filteredData={filteredData}
 AcParameters={AcMatchedParameters}
@@ -298,7 +316,7 @@ setStageThreeCollapsed={setStageThreeCollapsed}
 />
 )}
 
-{showStageOne && NICMatchedParameters && (
+{NICMatchedParameters && (
 <StageFourNICTest
 filteredData={filteredData}
 NICParameters={NICMatchedParameters}
