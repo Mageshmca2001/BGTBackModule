@@ -22,13 +22,11 @@ const [username, setUsername] = useState('');
 const [password, setPassword] = useState('');
 const [rememberMe, setRememberMe] = useState(false);
 const [errors, setErrors] = useState({ username: '', password: '' });
-const [loginSuccessMessage, setLoginSuccessMessage] = useState('');
 const [isLoading, setIsLoading] = useState(false);
 const [isPageLoading, setIsPageLoading] = useState(true);
 const [showInactiveModal, setShowInactiveModal] = useState(false);
 
 const navigate = useNavigate();
-
 const API_BASE = import.meta.env.VITE_API;
 
 useEffect(() => {
@@ -108,7 +106,6 @@ Cookies.remove('loginName');
 Cookies.remove('loginPassword');
 }
 
-setLoginSuccessMessage('Login Successful!');
 setIsLoading(false);
 
 const role = safeUserRole.toLowerCase();
@@ -181,6 +178,7 @@ BrightGrid Technologies LLP
 <input
 type="text"
 value={username}
+autoComplete="username"
 onChange={(e) => setUsername(e.target.value)}
 className="w-full border-b-2 focus:outline-none focus:border-primary focus:animate-pulse"
 />
@@ -194,6 +192,7 @@ className="w-full border-b-2 focus:outline-none focus:border-primary focus:anima
 <input
 type="password"
 value={password}
+autoComplete="current-password"
 onChange={(e) => setPassword(e.target.value)}
 className="w-full border-b-2 focus:outline-none focus:border-primary focus:animate-pulse"
 />
@@ -225,10 +224,6 @@ Check In
 <p className="text-gray-500 text-base mt-4">
 By signing in, you agree to our Terms of Service and Privacy Policy.
 </p>
-
-{loginSuccessMessage && (
-<p className="text-green-600 text-center font-poppins mt-4">{loginSuccessMessage}</p>
-)}
 </form>
 </div>
 </div>
