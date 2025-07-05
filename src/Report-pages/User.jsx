@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import 'boxicons/css/boxicons.min.css';
 
-const API_BASE = import.meta.env.VITE_API || 'http://localhost:5000';
+const API_BASE = import.meta.env.VITE_API || 'http://192.168.29.50:4000';
 
 const UsersDetails = () => {
 const [search, setSearch] = useState('');
