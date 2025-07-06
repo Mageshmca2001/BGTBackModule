@@ -14,6 +14,7 @@ Tooltip,
 Legend,
 } from 'chart.js';
 import { motion, AnimatePresence } from 'framer-motion';
+import ChatBot from './chatbot';
 
 // import Confetti from 'react-confetti';
 import { useWindowSize } from '@react-hook/window-size';
@@ -496,6 +497,8 @@ title={`${i === 0 ? 'This Year' : 'Previous Year'}: ${getYearLabel(i)}`}
 </div>
 </section>
 </main>
+<ChatBot />
+
 </>
 );
 };
