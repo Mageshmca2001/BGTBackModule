@@ -11,12 +11,10 @@ PointElement,
 ArcElement,
 Title,
 Tooltip,
-Legend,
+Legend
 } from 'chart.js';
 import { motion, AnimatePresence } from 'framer-motion';
 import ChatBot from './chatbot';
-
-// import Confetti from 'react-confetti';
 import { useWindowSize } from '@react-hook/window-size';
 import StarCard from '../components/StarCard';
 
@@ -33,123 +31,79 @@ Legend,
 ChartDataLabels
 );
 
-const timeData = ['08:00', '10:00', '12:00', '14:00', '16:00', '18:00', '20:00', '22:00', '00:00', '02:00', '04:00', '06:00'];
+const timeData = [
+'06:00', '08:00', '10:00', '12:00', '14:00',
+'16:00', '18:00', '20:00', '22:00', '00:00',
+'02:00', '04:00', '06:00'
+];
 
-const LoadingDots = () => (
-<div className="flex justify-center items-center h-screen text-2xl text-blue-600 font-poppins">
-Loading
-<span className="animate-bounce mx-1">.</span>
-<span className="animate-bounce mx-1 delay-150">.</span>
-<span className="animate-bounce mx-1 delay-300">.</span>
-</div>
-);
+const getWeekRange = (offset = 0) => {
+const today = new Date();
+const day = today.getDay();
+const sunday = new Date(today);
+sunday.setDate(today.getDate() - day - offset * 7);
+const saturday = new Date(sunday);
+saturday.setDate(sunday.getDate() + 6);
 
-const containerVariants = {
-hidden: {},
-visible: {
-transition: {
-staggerChildren: 0.15,
-delayChildren: 0.1,
-},
-},
+const formatShort = (d) =>
+`${d.toLocaleDateString('en-GB', { weekday: 'short' })} ${d.toLocaleDateString('en-GB', {
+day: '2-digit',
+month: '2-digit',
+year: 'numeric'
+})}`;
+
+return {
+short: `${formatShort(sunday)} - ${formatShort(saturday)}`
+};
 };
 
-const popUpCardVariants = {
-hidden: {
-opacity: 0,
-y: 50,
-rotateX: -90,
-scale: 0.8,
-transition: {
-duration: 0.4,
-ease: 'easeOut',
-},
-},
-visible: {
-opacity: 1,
-y: 0,
-rotateX: 0,
-scale: 1,
-transition: {
-type: 'spring',
-stiffness: 100,
-damping: 12,
-},
-},
-exit: {
-opacity: 0,
-y: 50,
-rotateX: 90,
-scale: 0.8,
-transition: {
-duration: 0.3,
-ease: 'easeIn',
-},
-},
-};
+const getCurrentMonthWeeks = () => {
+const today = new Date();
+const startOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
+const endOfMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0);
+const weeks = [];
+let current = new Date(startOfMonth);
 
-
-
-const metricsData = {
-tested: [2000, 3500, 4500, 7000, 7000, 3000, 3500, 4500, 5000, 8000, 4000, 3000],
-completed: [1000, 2500, 2500, 4000, 5000, 3500, 4500, 7000, 7000, 3000, 3500, 4500],
-reworked: [500, 500, 1000, 2000, 1000, 3500, 4500, 7000, 7000, 3000, 3500, 4500],
-};
-
-const getWeeklyRangesOfMonth = () => {
-const now = new Date();
-const year = now.getFullYear();
-const month = now.getMonth();
-const firstDay = new Date(year, month, 1);
-const lastDay = new Date(year, month + 1, 0);
-let weeks = [];
-let start = new Date(firstDay);
-
-while (start <= lastDay) {
-let end = new Date(start);
-end.setDate(end.getDate() + 6);
-if (end > lastDay) end = new Date(lastDay);
-weeks.push({ from: new Date(start), to: new Date(end) });
-start.setDate(end.getDate() + 1);
+while (current <= endOfMonth) {
+const weekStart = new Date(current);
+const weekEnd = new Date(current);
+weekEnd.setDate(weekStart.getDate() + 6);
+if (weekEnd > endOfMonth) weekEnd.setTime(endOfMonth.getTime());
+weeks.push({ start: weekStart, end: weekEnd });
+current.setDate(current.getDate() + 7);
 }
 
-return weeks.map(({ from, to }) => {
-const fromStr = from.toLocaleDateString('en-GB', { day: '2-digit' });
-const toStr = to.toLocaleDateString('en-GB', { day: '2-digit', month: 'short' });
-return `${fromStr}–${toStr}`;
+if (weeks.length > 1) {
+const last = weeks[weeks.length - 1];
+const daysInLast = Math.ceil((last.end - last.start) / (1000 * 60 * 60 * 24)) + 1;
+if (daysInLast < 4) {
+const prev = weeks[weeks.length - 2];
+prev.end = new Date(last.end);
+weeks.pop();
+}
+}
+
+return weeks.map((week) => {
+const label = `${week.start.getDate().toString().padStart(2, '0')} - ${week.end
+.getDate()
+.toString()
+.padStart(2, '0')} ${week.end.toLocaleString('default', { month: 'short' })}`;
+return { ...week, label };
 });
-};
-
-const getMonthRangeLabel = (offset = 0) => {
-const now = new Date();
-const currentMonth = new Date(now.getFullYear(), now.getMonth() - offset, 1);
-return currentMonth.toLocaleDateString('en-GB', { month: 'short', year: 'numeric' });
-};
-
-const getYearLabel = (offset = 0) => {
-const now = new Date();
-return (now.getFullYear() - offset).toString();
 };
 
 const Dashboard = () => {
 const [data, setData] = useState(null);
 const [loading, setLoading] = useState(true);
 const [error, setError] = useState(null);
-const [selectedRange, setSelectedRange] = useState('Day');
+const [selectedRange, setSelectedRange] = useState('Present Day');
 const [currentDate, setCurrentDate] = useState(new Date());
-const [redLineValue, setRedLineValue] = useState(5000);
-const [showCelebration, setShowCelebration] = useState(false);
-const [width, height] = useWindowSize();
+const [redLineValue, setRedLineValue] = useState(1000);
+const [width] = useWindowSize();
 
-const { completed, reworked } = metricsData;
 const formattedDate = currentDate.toLocaleDateString('en-GB');
 const formattedTime = currentDate.toLocaleTimeString();
-const monthWeeks = getWeeklyRangesOfMonth();
-
-const weeklyData = monthWeeks.map(() => ({
-total: Math.floor(Math.random() * 3000) + 2000,
-completed: Math.floor(Math.random() * 2000) + 1000,
-}));
+const weekRangePresent = getWeekRange(0);
 
 useEffect(() => {
 const interval = setInterval(() => setCurrentDate(new Date()), 1000);
@@ -160,11 +114,44 @@ useEffect(() => {
 const fetchData = async () => {
 try {
 const res = await fetch('https://frontend-4iv0.onrender.com/0');
-if (!res.ok) throw new Error('Network response was not ok');
+if (!res.ok) throw new Error('Network error');
 const result = await res.json();
-result.previousWeek = { total: 2000, completed: 1800 };
-result.previousMonth = { total: 5000, completed: 4500 };
-result.previousYear = { total: 80000, completed: 75000 };
+
+result.presentDay = {
+total: 3000,
+completed: 2800,
+shift1: 1000,
+shift2: 1000,
+shift3: 800,
+hourlyCompleted: [400, 500, 600, 550, 700, 650, 600, 500, 400, 300, 250, 200, 150],
+hourlyReworked: [100, 80, 70, 60, 90, 85, 70, 60, 40, 30, 25, 20, 15]
+};
+
+result.previousDay = {
+total: 1800,
+completed: 1600,
+shift1: 600,
+shift2: 700,
+shift3: 500,
+hourlyCompleted: [300, 400, 350, 300, 250, 200, 180, 150, 140, 130, 120, 100, 90],
+hourlyReworked: [60, 55, 50, 40, 35, 30, 25, 20, 18, 15, 10, 8, 5]
+};
+
+result.presentWeek = {
+total: 7000,
+completed: 6400,
+dailyCompleted: [900, 1000, 950, 920, 910, 880, 840]
+};
+
+const monthWeeks = getCurrentMonthWeeks().map((week, i) => ({
+...week,
+total: 1800 + i * 500,
+completed: 1500 + i * 400,
+hourlyCompleted: Array(13).fill(100 + i * 10)
+}));
+
+result.previousWeeks = monthWeeks;
+
 setData(result);
 } catch (err) {
 setError(err.message);
@@ -178,172 +165,224 @@ const interval = setInterval(fetchData, 10000);
 return () => clearInterval(interval);
 }, []);
 
-// 🥳 Trigger celebration if threshold reached and > 0
-useEffect(() => {
-if (redLineValue <= 0) return;
-const reached = completed.some((value) => value >= redLineValue);
-if (reached) {
-setShowCelebration(true);
-const timer = setTimeout(() => setShowCelebration(false), 5000);
-return () => clearTimeout(timer);
+const getPieStats = () => {
+if (!data) return { completed: 0, reworked: 0 };
+if (selectedRange === 'Present Day' || selectedRange === 'Previous Day') {
+const selected = selectedRange === 'Present Day' ? data.presentDay : data.previousDay;
+const completed = selected.hourlyCompleted?.reduce((a, b) => a + b, 0);
+const reworked = selected.hourlyReworked?.reduce((a, b) => a + b, 0);
+return { completed, reworked };
 }
-}, [completed, redLineValue]);
+if (selectedRange === 'Present Week') {
+const { completed = 0, total = 0 } = data.presentWeek || {};
+return { completed, reworked: total - completed };
+}
+if (selectedRange === 'Previous Weeks') {
+const totalCompleted = data.previousWeeks?.reduce((sum, w) => sum + (w.completed || 0), 0);
+const total = data.previousWeeks?.reduce((sum, w) => sum + (w.total || 0), 0);
+return { completed: totalCompleted, reworked: total - totalCompleted };
+}
+return { completed: 0, reworked: 0 };
+};
 
-const barData = useMemo(() => ({
-labels: timeData,
+const { completed, reworked } = getPieStats();
+
+const pieData = useMemo(() => ({
+labels: ['Completed', 'Reworked'],
 datasets: [
 {
+data: [completed, reworked],
+backgroundColor: [
+'rgba(34, 197, 94, 0.85)', // green
+'rgba(239, 68, 68, 0.85)'  // red
+],
+borderColor: '#fff',
+borderWidth: 2,
+hoverOffset: 10,
+}
+]
+}), [completed, reworked]);
+
+const pieChartOptions = {
+responsive: true,
+maintainAspectRatio: false,
+cutout: '60%', // donut effect
+plugins: {
+datalabels: {
+display: (ctx) => {
+const value = ctx.dataset.data[ctx.dataIndex];
+const total = ctx.dataset.data.reduce((a, b) => a + b, 0);
+return total > 0 && (value / total) * 100 >= 1;
+},
+formatter: (value, context) => {
+const data = context.dataset.data;
+const total = data.reduce((a, b) => a + b, 0);
+return total === 0 ? '' : `${((value / total) * 100).toFixed(1)}%`;
+},
+color: '#fff',
+font: {
+weight: 'bold',
+size: 14,
+family: 'Poppins'
+}
+},
+tooltip: {
+enabled: true,
+callbacks: {
+label: (ctx) => {
+const label = ctx.label;
+const value = ctx.raw;
+return `${label}: ${value}`;
+}
+}
+},
+legend: {
+position: 'bottom',
+labels: {
+font: {
+family: 'Poppins',
+size: 13
+},
+color: '#4B5563'
+}
+},
+// Custom plugin for center text
+beforeDraw: (chart) => {
+const { width } = chart;
+const { height } = chart;
+const ctx = chart.ctx;
+ctx.restore();
+const fontSize = (height / 130).toFixed(2);
+ctx.font = `${fontSize}em Poppins`;
+ctx.textBaseline = 'middle';
+
+const completed = chart.data.datasets[0].data[0];
+const total = chart.data.datasets[0].data.reduce((a, b) => a + b, 0);
+const percent = total ? ((completed / total) * 100).toFixed(0) : 0;
+const text = `${percent}% Done`;
+
+const textX = Math.round((width - ctx.measureText(text).width) / 2);
+const textY = height / 2;
+ctx.fillStyle = '#1F2937'; // dark gray
+ctx.fillText(text, textX, textY);
+ctx.save();
+}
+}
+};
+
+
+// Loading animation
+// Loading animation
+const LoadingDots = () => (
+<div className="flex justify-center items-center h-screen text-2xl text-blue-600 font-poppins">
+Loading
+<span className="animate-bounce mx-1">.</span>
+<span className="animate-bounce mx-1 delay-150">.</span>
+<span className="animate-bounce mx-1 delay-300">.</span>
+</div>
+);
+
+
+const barChartOptions = {
+responsive: true,
+maintainAspectRatio: false,
+plugins: {
+datalabels: { display: false },
+tooltip: {
+enabled: true,
+mode: 'index',
+intersect: false,
+callbacks: {
+label: function (context) {
+const label = context.dataset.label || '';
+const value = context.parsed.y;
+if (label === 'Threshold') return `🔴 ${label}: ${value}`;
+if (label === 'Completed') return `🟦 ${label}: ${value}`;
+return `${label}: ${value}`;
+}
+}
+},
+legend: {
+position: 'top',
+labels: { font: { size: 13 } }
+}
+},
+interaction: {
+mode: 'index',
+intersect: false
+},
+scales: {
+y: {
+beginAtZero: true,
+suggestedMax: redLineValue + 500,
+ticks: { stepSize: 200 }
+}
+}
+};
+
+const barData = useMemo(() => {
+let labels = timeData;
+let dataPoints = [];
+
+if (selectedRange === 'Present Day') {
+dataPoints = data?.presentDay?.hourlyCompleted || [];
+} else if (selectedRange === 'Previous Day') {
+dataPoints = data?.previousDay?.hourlyCompleted || [];
+} else if (selectedRange === 'Present Week') {
+labels = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+dataPoints = data?.presentWeek?.dailyCompleted || [];
+} else if (selectedRange === 'Previous Weeks') {
+labels = data?.previousWeeks?.map((w, i) => `Week ${i + 1}`);
+dataPoints = data?.previousWeeks?.map(w =>
+Math.round((w.hourlyCompleted?.reduce((a, b) => a + b, 0) || 0) / 13)
+);
+}
+
+const completedDataset = {
 label: 'Completed',
-data: completed,
-backgroundColor: 'rgba(34, 197, 94, 0.7)',
-borderColor: 'rgba(22, 163, 74, 1)',
+data: dataPoints,
+backgroundColor: 'rgba(59, 130, 246, 0.7)',
+borderColor: 'rgba(37, 99, 235, 1)',
 borderWidth: 1,
 borderRadius: 6,
-type: 'bar',
-},
-{
-label: 'Completed (Line)',
-data: completed,
-borderColor: 'rgba(59, 130, 246, 1)',
-borderWidth: 2,
-fill: false,
-type: 'line',
-tension: 0.4,
-pointRadius: 3,
-},
-{
-label: `Threshold (${redLineValue})`,
-data: Array(timeData.length).fill(redLineValue),
+type: 'bar'
+};
+
+const thresholdDataset = {
+label: 'Threshold',
+data: Array(dataPoints.length).fill(redLineValue),
 borderColor: 'rgba(239, 68, 68, 1)',
 borderWidth: 2,
 borderDash: [5, 5],
 pointRadius: 0,
-type: 'line',
-},
-],
-}), [completed, redLineValue]);
-
-const chartOptions = {
-responsive: true,
-maintainAspectRatio: false,
-interaction: { mode: 'index', intersect: false },
-plugins: {
-datalabels: { display: false },
-tooltip: { enabled: true },
-legend: {
-position: 'bottom',
-labels: { font: { size: 13 } },
-},
-},
-scales: { y: { beginAtZero: true } },
-animation: {
-duration: 800,
-easing: 'easeOutQuart',
-},
+fill: false,
+type: 'line'
 };
 
-const pieData = {
-labels: ['Completed', 'Reworked'],
-datasets: [{
-data: [completed.at(-1), reworked.at(-1)],
-backgroundColor: ['rgba(34, 197, 94, 0.9)', 'rgba(239, 68, 68, 0.9)'],
-borderWidth: 1,
-}],
+return {
+labels,
+datasets: [completedDataset, thresholdDataset]
 };
-
-
-const popUpCardVariants = {
-hidden: {
-opacity: 0,
-rotateX: -90,
-scale: 0.8,
-y: 50,
-transition: {
-duration: 0.4,
-ease: 'easeOut',
-},
-},
-visible: {
-opacity: 1,
-rotateX: 0,
-scale: 1,
-y: 0,
-transition: {
-type: 'spring',
-stiffness: 100,
-damping: 12,
-},
-},
-exit: {
-opacity: 0,
-rotateX: 90,
-scale: 0.8,
-y: -50,
-transition: {
-duration: 0.4,
-ease: 'easeInOut',
-},
-},
-};
-
-
-const containerVariants = {
-hidden: {
-opacity: 0,
-scale: 0.9,
-},
-visible: {
-opacity: 1,
-scale: 1,
-transition: {
-when: 'beforeChildren',
-staggerChildren: 0.2,
-delayChildren: 0.1,
-},
-},
-};
-
+}, [selectedRange, data, redLineValue]);
 
 if (loading) return <LoadingDots />;
 if (error) return <div className="text-center text-red-600 mt-10 font-semibold font-poppins">Error: {error}</div>;
-
 return (
 <>
-{/* {showCelebration && (
-<>
-<Confetti
-width={width}
-height={height}
-numberOfPieces={150}
-recycle={false}
-gravity={0.3}
-initialVelocityY={10}
-confettiSource={{ x: 0, y: 0, w: 10, h: 10 }}
-/>
-<Confetti
-width={width}
-height={height}
-numberOfPieces={150}
-recycle={false}
-gravity={0.3}
-initialVelocityY={10}
-confettiSource={{ x: width - 10, y: 0, w: 10, h: 10 }}
-/>
-</> */}
-
-
-
 <main className="flex-1 px-2 sm:px-4 md:px-2 pb-8 overflow-x-hidden font-poppins">
-{/* Header */}
-<div className="flex flex-col sm:flex-row justify-between sm:items-end space-y-4 sm:space-y-0 sm:space-x-4 p-2 mb-4">
+<div className="flex flex-col sm:flex-row justify-between sm:items-end p-2 mb-4 gap-4">
 <div>
-<h1 className="text-2xl sm:text-3xl text-primary font-[poppins]">Dashboard</h1>
-<div className="mt-3 sm:mt-4 flex flex-col sm:flex-row gap-3 sm:items-end">
-<select value={selectedRange} onChange={(e) => setSelectedRange(e.target.value)} className="border border-gray-300 rounded-lg px-3 py-2 text-base w-full sm:w-36">
-<option value="Day">Day</option>
-<option value="Week">Week</option>
-<option value="Month">Month</option>
-<option value="Year">Year</option>
+<h1 className="text-2xl sm:text-3xl text-primary">Dashboard</h1>
+<div className="mt-3 flex flex-col sm:flex-row gap-3 sm:items-end">
+<select
+value={selectedRange}
+onChange={(e) => setSelectedRange(e.target.value)}
+className="border border-gray-300 rounded-lg px-3 py-2 text-base w-full sm:w-38"
+>
+<option value="Present Day">Present Day</option>
+<option value="Previous Day">Previous Day</option>
+<option value="Present Week">Present Week</option>
+<option value="Previous Weeks">Previous Weeks</option>
 </select>
 <div className="flex flex-col w-full sm:w-auto">
 <label className="text-sm font-medium text-gray-700 mb-1">Threshold Point</label>
@@ -357,121 +396,121 @@ className="border border-gray-300 rounded-lg px-3 py-2 w-full sm:w-32 text-sm"
 </div>
 </div>
 <div className="flex flex-col sm:flex-row gap-2">
-<div className="bg-primary text-white px-4 py-2 text-base1 rounded-lg shadow text-center">Date: {formattedDate}</div>
-<div className="bg-primary text-white px-4 py-2 text-base1 rounded-lg shadow text-center">Time: {formattedTime}</div>
+<div className="bg-primary text-white px-4 py-2 rounded-lg shadow text-center">
+Date: {formattedDate}
+</div>
+<div className="bg-primary text-white px-4 py-2 rounded-lg shadow text-center">
+Time: {formattedTime}
+</div>
 </div>
 </div>
 
-{/* Cards */}
-<section
-className="bg-white rounded-2xl shadow-lg p-6 mb-6 transition-all"
-style={{ perspective: '1500px' }} // Adds 3D rolling depth
->
 
+<section className="bg-white rounded-2xl shadow-lg p-6 mb-6">
 <AnimatePresence mode="wait">
-{['Day', 'Week', 'Month', 'Year'].includes(selectedRange) && (
+{(selectedRange === 'Present Day' || selectedRange === 'Previous Day') && (
 <motion.div
 key={selectedRange}
-className={`grid gap-4 ${
-selectedRange === 'Year'
-? 'grid-cols-1 sm:grid-cols-2'
-: selectedRange === 'Week'
-? 'grid-cols-1 sm:grid-cols-2 md:grid-cols-5'
-: 'grid-cols-1 sm:grid-cols-2 md:grid-cols-4'
-}`}
-variants={containerVariants}
+className="grid gap-4 grid-cols-1 sm:grid-cols-2 md:grid-cols-4"
 initial="hidden"
 animate="visible"
 exit="hidden"
 >
-{/* DAY */}
-{selectedRange === 'Day' &&
-['Present Day', 'Shift 1', 'Shift 2', 'Shift 3'].map((title, i) => (
-<motion.div
-key={i}
-variants={popUpCardVariants}
-initial="hidden"
-animate="visible"
-exit="exit"
->
+{/* Day Summary Card */}
+<motion.div key="summary" initial="hidden" animate="visible">
 <StarCard
-{...data?.presentDay}
+total={data?.[selectedRange === 'Present Day' ? 'presentDay' : 'previousDay']?.total || 0}
+completed={data?.[selectedRange === 'Present Day' ? 'presentDay' : 'previousDay']?.completed || 0}
+bgColor="from-sky-400 to-sky-600"
+icon="sun"
+title={selectedRange}
+/>
+</motion.div>
+
+{/* Shift Cards */}
+{['Shift 1', 'Shift 2', 'Shift 3'].map((title, i) => (
+<motion.div key={i} custom={i} initial="hidden" animate="visible">
+<StarCard
+total={data?.[selectedRange === 'Present Day' ? 'presentDay' : 'previousDay']?.[`shift${i + 1}`] || 0}
+completed={data?.[selectedRange === 'Present Day' ? 'presentDay' : 'previousDay']?.completed || 0}
 bgColor={[
-'from-sky-400 to-sky-600',
 'from-purple-400 to-purple-600',
 'from-yellow-400 to-yellow-600',
-'from-indigo-400 to-indigo-600',
+'from-indigo-400 to-indigo-600'
 ][i]}
-icon={['sun', 'briefcase', 'sun', 'moon'][i]}
+icon={['briefcase', 'sun', 'moon'][i]}
 title={title}
 />
 </motion.div>
 ))}
+</motion.div>
+)}
 
-{/* WEEK */}
-{selectedRange === 'Week' &&
-monthWeeks.map((label, i) => (
-<motion.div
-key={i}
-variants={popUpCardVariants}
-initial="hidden"
-animate="visible"
-exit="exit"
->
+{selectedRange === 'Present Week' && (
+<motion.div key="present-week" className="grid gap-4" initial={{ opacity: 0, y: 100 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -50 }}>
+<div className="grid grid-cols-1">
 <StarCard
-{...(weeklyData[i] || { total: 0, completed: 0 })}
-bgColor={[
-'from-sky-400 to-sky-600',
-'from-purple-400 to-purple-600',
-'from-yellow-400 to-yellow-600',
-'from-indigo-400 to-indigo-600',
-'from-pink-400 to-pink-600',
-][i % 5]}
+total={data?.presentWeek?.total || 0}
+completed={data?.presentWeek?.completed || 0}
+bgColor="from-cyan-500 to-blue-500"
 icon="calendarWeek"
-title={`Week ${i + 1}: ${label}`}
+title={`Present Week (${weekRangePresent.short})`}
+disableHover
 />
-</motion.div>
-))}
+</div>
 
-{/* MONTH */}
-{selectedRange === 'Month' &&
-Array.from({ length: 4 }).map((_, i) => (
-<motion.div
-key={i}
-variants={popUpCardVariants}
-initial="hidden"
-animate="visible"
-exit="exit"
->
+<div className="overflow-x-auto">
+<div className="flex gap-4 min-w-full">
+{[
+{ day: 'Sunday', icon: 'sun', color: 'from-sky-400 to-sky-600' },
+{ day: 'Monday', icon: 'briefcase', color: 'from-purple-400 to-purple-600' },
+{ day: 'Tuesday', icon: 'sun', color: 'from-yellow-400 to-yellow-600' },
+{ day: 'Wednesday', icon: 'moon', color: 'from-indigo-400 to-indigo-600' },
+{ day: 'Thursday', icon: 'sun', color: 'from-green-400 to-green-600' },
+{ day: 'Friday', icon: 'briefcase', color: 'from-pink-400 to-pink-600' },
+{ day: 'Saturday', icon: 'moon', color: 'from-blue-400 to-blue-600' },
+].map((d, i) => (
+<div key={i} className="min-w-[220px]">
 <StarCard
-{...{ total: 4000 + i * 500, completed: 3000 + i * 400 }}
+total={1000}
+completed={800}
+bgColor={d.color}
+icon={d.icon}
+title={d.day}
+disableHover
+/>
+</div>
+))}
+</div>
+</div>
+</motion.div>
+)}
+
+{selectedRange === 'Previous Weeks' && (
+<motion.div
+key="prev-weeks"
+className="grid gap-4 grid-cols-1 sm:grid-cols-2 md:grid-cols-4"
+initial={{ opacity: 0, y: 100 }}
+animate={{ opacity: 1, y: 0 }}
+exit={{ opacity: 0, y: -50 }}
+>
+{data?.previousWeeks?.map((week, i) => (
+<motion.div key={i} custom={i} initial="hidden" animate="visible">
+<StarCard
+total={week.total}
+completed={week.completed}
 bgColor={[
 'from-sky-400 to-sky-600',
 'from-purple-400 to-purple-600',
 'from-yellow-400 to-yellow-600',
 'from-indigo-400 to-indigo-600',
-][i]}
-icon="calendar"
-title={`Month: ${getMonthRangeLabel(i)}`}
-/>
-</motion.div>
-))}
-
-{/* YEAR */}
-{selectedRange === 'Year' &&
-['presentYear', 'previousYear'].map((key, i) => (
-<motion.div
-key={i}
-variants={popUpCardVariants}
-initial="hidden"
-animate="visible"
-exit="exit"
->
-<StarCard
-{...data?.[key]}
-bgColor={['from-red-500 to-red-700', 'from-gray-500 to-gray-700'][i]}
-icon="calendarAlt"
-title={`${i === 0 ? 'This Year' : 'Previous Year'}: ${getYearLabel(i)}`}
+'from-green-400 to-green-600',
+'from-pink-400 to-pink-600',
+'from-blue-400 to-blue-600',
+][i % 7]}
+icon={['sun', 'briefcase', 'sun', 'moon', 'sun', 'briefcase', 'moon'][i % 7]}
+title={`Week ${i + 1}: ${week.label}`}
+disableHover
 />
 </motion.div>
 ))}
@@ -480,25 +519,107 @@ title={`${i === 0 ? 'This Year' : 'Previous Year'}: ${getYearLabel(i)}`}
 </AnimatePresence>
 </section>
 
-
-
-{/* Charts */}
 <section className="bg-white rounded-2xl shadow-lg p-6 mt-4">
 <h2 className="text-2xl font-bold text-center text-gray-700 mb-6">Meter Analysis Dashboard</h2>
-<div className="grid grid-cols-1 md:grid-cols-5 gap-6">
-<div className="md:col-span-1 p-4 rounded-xl bg-gray-50 hover:bg-white transition shadow">
+<div className="grid grid-cols-1 md:grid-cols-5 gap-6 font-poppins">
+{/* Pie Chart */}
+<div className="md:col-span-1 p-4 rounded-xl bg-gray-50 shadow">
 <h3 className="text-lg font-semibold text-gray-700 mb-4">Status Pie</h3>
-<div className="h-[250px]"><Pie data={pieData} options={chartOptions} /></div>
+<div className="h-[250px] relative hover:shadow-green-300 transition duration-300">
+<Pie data={pieData} options={pieChartOptions} />
 </div>
-<div className="md:col-span-4 p-4 rounded-xl bg-gray-50 hover:bg-white transition shadow">
-<h3 className="text-lg font-semibold text-gray-700 mb-4">Hourly Progress</h3>
-<div className="h-[250px]"><Bar data={barData} options={chartOptions} /></div>
+
+</div>
+
+{/* Bar Chart */}
+<div className="md:col-span-4 p-4 rounded-xl bg-gray-50 shadow">
+<h3 className="text-lg font-semibold text-gray-700 mb-4">
+{['Present Day', 'Previous Day','Present week','Previous weeks'].includes(selectedRange) ? 'Hourly Progress' : 'Weekly Progress'}
+</h3>
+<div className="h-[250px]">
+<Bar data={{
+labels: barData.labels,
+datasets: [
+{
+label: 'Completed',
+data: barData.datasets[0].data,
+backgroundColor: 'rgba(34, 197, 94, 0.7)',
+borderColor: 'rgba(22, 163, 74, 1)',
+borderWidth: 1,
+borderRadius: 6,
+type: 'bar'
+},
+{
+label: 'Threshold',
+data: Array(barData.datasets[0].data.length).fill(redLineValue),
+borderColor: 'rgba(239, 68, 68, 1)',
+borderWidth: 2,
+borderDash: [5, 5],
+pointRadius: 0,
+fill: false,
+type: 'line'
+},
+{
+label: 'Tracking Line',
+data: barData.datasets[0].data,
+borderColor: 'rgba(59, 130, 246, 1)', // Blue
+backgroundColor: 'transparent',
+borderWidth: 2,
+pointRadius: 3,
+tension: 0.3,
+type: 'line'
+}
+]
+}} options={{
+responsive: true,
+maintainAspectRatio: false,
+plugins: {
+datalabels: { display: false },
+tooltip: {
+enabled: true,
+mode: 'index',
+intersect: false,
+callbacks: {
+label: function (context) {
+const label = context.dataset.label || '';
+const value = context.parsed.y;
+if (label === 'Threshold') return `🔴 ${label}: ${value}`;
+if (label === 'Completed') return `🟢 ${label}: ${value}`;
+if (label === 'Tracking Line') return `🔵 ${label}: ${value}`;
+return `${label}: ${value}`;
+}
+}
+},
+legend: {
+position: 'top',
+labels: {
+font: {
+family: 'Poppins',
+size: 13
+}
+}
+}
+},
+interaction: {
+mode: 'index',
+intersect: false
+},
+scales: {
+y: {
+beginAtZero: true,
+suggestedMax: redLineValue + 500,
+ticks: { stepSize: 200 }
+}
+}
+}} />
+</div>
 </div>
 </div>
 </section>
-</main>
-<ChatBot />
 
+
+<ChatBot />
+</main>
 </>
 );
 };

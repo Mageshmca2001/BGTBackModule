@@ -1,263 +1,267 @@
-import  { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import ExcelJS from 'exceljs';
 import { saveAs } from 'file-saver';
-import axios from 'axios';
 import Chart from 'chart.js/auto';
 
 const Monthly = () => {
-const [selectedMonth, setSelectedMonth] = useState('');
-const [selectedYear, setSelectedYear] = useState('');
-const [entries, setEntries] = useState('10');
-const [search, setSearch] = useState('');
-const [filteredData, setFilteredData] = useState([]);
-const [data, setData] = useState([]);
-const [currentPage, setCurrentPage] = useState(1);
-const [itemsPerPage, setItemsPerPage] = useState(10);
-const [dateTime, setDateTime] = useState(new Date());
-const [loading, setLoading] = useState(false);
-const isExportDisabled = filteredData.length === 0;
+  const [selectedMonth, setSelectedMonth] = useState('');
+  const [selectedYear, setSelectedYear] = useState('');
+  const [entries, setEntries] = useState('10');
+  const [search, setSearch] = useState('');
+  const [filteredData, setFilteredData] = useState([]);
+  const [data, setData] = useState([]);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(10);
+  const [dateTime, setDateTime] = useState(new Date());
+  const [loading, setLoading] = useState(false);
+  const [modalMessage, setModalMessage] = useState('');
+  const [showModal, setShowModal] = useState(false);
+  const isExportDisabled = filteredData.length === 0;
 
+  const chartRef = useRef(null);
+  const chartInstanceRef = useRef(null);
 
-const chartRef = useRef(null);
-const chartInstanceRef = useRef(null);
+  useEffect(() => {
+    document.title = 'BGT - Monthly Report';
+  }, []);
 
-useEffect(() => {
-document.title = 'BGT - Monthly Report';
-}, []);
+  useEffect(() => {
+    const interval = setInterval(() => setDateTime(new Date()), 1000);
+    return () => clearInterval(interval);
+  }, []);
 
-useEffect(() => {
-const interval = setInterval(() => setDateTime(new Date()), 1000);
-return () => clearInterval(interval);
-}, []);
+  const formattedDate = dateTime.toLocaleDateString('en-GB', {
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+  });
+  const formattedTime = dateTime.toLocaleTimeString();
 
-const formattedDate = dateTime.toLocaleDateString('en-GB', {
-day: '2-digit', month: '2-digit', year: 'numeric'
-});
-const formattedTime = dateTime.toLocaleTimeString();
+  const totalPages = Math.ceil(filteredData.length / itemsPerPage);
 
-const totalPages = Math.ceil(filteredData.length / itemsPerPage);
+  const handleMonthChange = (e) => setSelectedMonth(e.target.value);
+  const handleYearChange = (e) => setSelectedYear(e.target.value);
 
-const handleMonthChange = (e) => setSelectedMonth(e.target.value);
-const handleYearChange = (e) => setSelectedYear(e.target.value);
+  const handleEntriesChange = (e) => {
+    const value = e.target.value;
+    setEntries(value);
+    const length = value === 'All' ? filteredData.length || data.length : parseInt(value, 10);
+    setItemsPerPage(length);
+    setCurrentPage(1);
+  };
 
-const handleEntriesChange = (e) => {
-const value = e.target.value;
-setEntries(value);
-const length = value === 'All' ? filteredData.length || data.length : parseInt(value, 10);
-setItemsPerPage(length);
-setCurrentPage(1);
-};
+  const handleSearchChange = (e) => {
+    const searchValue = e.target.value.toLowerCase();
+    setSearch(searchValue);
+    const filtered = data.filter((item) =>
+      (item.date && item.date.toLowerCase().includes(searchValue)) ||
+      (item.tested && item.tested.toString().includes(searchValue)) ||
+      (item.completed && item.completed.toString().includes(searchValue)) ||
+      (item.reworked && item.reworked.toString().includes(searchValue))
+    );
+    setFilteredData(filtered);
+    setCurrentPage(1);
+  };
 
-const handleSearchChange = (e) => {
-const searchValue = e.target.value.toLowerCase();
-setSearch(searchValue);
-const filtered = data.filter((item) =>
-(item.date && item.date.toLowerCase().includes(searchValue)) ||
-(item.tested && item.tested.toString().includes(searchValue)) ||
-(item.completed && item.completed.toString().includes(searchValue)) ||
-(item.reworked && item.reworked.toString().includes(searchValue))
-);
-setFilteredData(filtered);
-setCurrentPage(1);
-};
+  const fetchWithTimeout = (url, options = {}, timeout = 10000) => {
+    return Promise.race([
+      fetch(url, options),
+      new Promise((_, reject) => setTimeout(() => reject(new Error('Request timeout')), timeout)),
+    ]);
+  };
 
-const handleGenerateReport = async () => {
-if (!selectedMonth || !selectedYear) {
-alert('Please select both month and year to generate the report.');
-return;
-}
+  const handleGenerateReport = async () => {
+    if (!selectedMonth || !selectedYear) {
+      setModalMessage('Please select both month and year to generate the report.');
+      setShowModal(true);
+      return;
+    }
 
-try {
-setLoading(true);
-const response = await axios.get("https://frontend-2-vt1l.onrender.com/admin");
-let result = response.data.filter((item) => item.date);
+    try {
+      setLoading(true);
+      const response = await fetchWithTimeout('https://frontend-2-vt1l.onrender.com/admin');
+      const json = await response.json();
 
-result = result.filter((item) => {
-const [day, month, year] = item.date.split('.');
-return month === selectedMonth && year === selectedYear;
-});
+      let result = json.filter((item) => item.date);
 
-if (entries === 'All') {
-setItemsPerPage(result.length);
-}
+      result = result.filter((item) => {
+        const [day, month, year] = item.date.split('.');
+        return month === selectedMonth && year === selectedYear;
+      });
 
-setData(result);
-setFilteredData(result);
-setCurrentPage(1);
-} catch (error) {
-console.error("Error fetching report:", error);
-} finally {
-setLoading(false);
-}
-};
+      if (entries === 'All') {
+        setItemsPerPage(result.length);
+      }
 
-const handleExport = async () => {
-try {
-const workbook = new ExcelJS.Workbook();
-const worksheet = workbook.addWorksheet('MonthlyReports');
+      setData(result);
+      setFilteredData(result);
+      setCurrentPage(1);
+    } catch (error) {
+      console.error('❌ Fetch error:', error);
+      setModalMessage('Error fetching data. Please check your network or try again.');
+      setShowModal(true);
+    } finally {
+      setLoading(false);
+    }
+  };
 
-// Header Row
-const header = ['Date', 'Tested', 'Completed', 'Reworked'];
-const headerRow = worksheet.addRow(header);
-headerRow.font = { bold: true };
-headerRow.alignment = { vertical: 'middle', horizontal: 'center' };
+  const handleExport = async () => {
+    try {
+      const workbook = new ExcelJS.Workbook();
+      const worksheet = workbook.addWorksheet('MonthlyReports');
 
-// Set column widths
-worksheet.columns = [
-{ width: 18 },
-{ width: 12 },
-{ width: 14 },
-{ width: 14 },
-{ width: 15 },
-];
+      const header = ['Date', 'Tested', 'Completed', 'Reworked'];
+      const headerRow = worksheet.addRow(header);
+      headerRow.font = { bold: true };
+      headerRow.alignment = { vertical: 'middle', horizontal: 'center' };
 
-// Data Rows
-filteredData.forEach(item => {
-const row = worksheet.addRow([
-item.date || '',
-item.tested || 0,
-item.completed || 0,
-item.reworked || 0,
-]);
-row.alignment = { vertical: 'middle', horizontal: 'center' };
-});
+      worksheet.columns = [
+        { width: 18 },
+        { width: 12 },
+        { width: 14 },
+        { width: 14 },
+      ];
 
-// Total Summary Label
-const summaryStart = filteredData.length + 3;
-const summaryTitle = worksheet.getCell(`A${summaryStart}`);
-summaryTitle.value = 'Total Summary';
-summaryTitle.font = { bold: true, size: 12 };
-summaryTitle.alignment = { vertical: 'middle', horizontal: 'center' };
+      filteredData.forEach(item => {
+        const row = worksheet.addRow([
+          item.date || '',
+          item.tested || 0,
+          item.completed || 0,
+          item.reworked || 0,
+        ]);
+        row.alignment = { vertical: 'middle', horizontal: 'center' };
+      });
 
-// Total Summary Rows
-const summaryRows = [
-['Total Tested', totalTested],
-['Total Completed', totalCompleted],
-['Total Reworked', totalReworked]
-];
+      const summaryStart = filteredData.length + 3;
+      const summaryTitle = worksheet.getCell(`A${summaryStart}`);
+      summaryTitle.value = 'Total Summary';
+      summaryTitle.font = { bold: true, size: 12 };
+      summaryTitle.alignment = { vertical: 'middle', horizontal: 'center' };
 
-summaryRows.forEach(([label, value]) => {
-const row = worksheet.addRow([label, value]);
-row.alignment = { vertical: 'middle', horizontal: 'center' };
-});
+      const summaryRows = [
+        ['Total Tested', totalTested],
+        ['Total Completed', totalCompleted],
+        ['Total Reworked', totalReworked],
+      ];
 
-// Generate and save Excel file
-const buffer = await workbook.xlsx.writeBuffer();
-const blob = new Blob([buffer], { type: 'application/octet-stream' });
-saveAs(blob, 'MonthlyReports.xlsx');
-} catch (error) {
-console.error('❌ Excel export error:', error);
-}
-};
+      summaryRows.forEach(([label, value]) => {
+        const row = worksheet.addRow([label, value]);
+        row.alignment = { vertical: 'middle', horizontal: 'center' };
+      });
 
+      const buffer = await workbook.xlsx.writeBuffer();
+      const blob = new Blob([buffer], { type: 'application/octet-stream' });
+      saveAs(blob, 'MonthlyReports.xlsx');
+    } catch (error) {
+      console.error('❌ Excel export error:', error);
+    }
+  };
 
-const handlePageChange = (page) => setCurrentPage(page);
+  const handlePageChange = (page) => setCurrentPage(page);
 
-const paginatedData = filteredData.slice(
-(currentPage - 1) * itemsPerPage,
-currentPage * itemsPerPage
-);
+  const paginatedData = filteredData.slice(
+    (currentPage - 1) * itemsPerPage,
+    currentPage * itemsPerPage
+  );
 
-// Chart setup with soft colors (Daily.jsx style)
-useEffect(() => {
-if (!chartRef.current || filteredData.length === 0) return;
+  useEffect(() => {
+    if (!chartRef.current || filteredData.length === 0) return;
 
-const ctx = chartRef.current.getContext('2d');
-if (chartInstanceRef.current) {
-chartInstanceRef.current.destroy();
-}
+    const ctx = chartRef.current.getContext('2d');
+    if (chartInstanceRef.current) {
+      chartInstanceRef.current.destroy();
+    }
 
-const labels = filteredData.map(item => item.date);
-const tested = filteredData.map(item => item.tested);
-const completed = filteredData.map(item => item.completed);
-const reworked = filteredData.map(item => item.reworked);
+    const labels = filteredData.map(item => item.date);
+    const tested = filteredData.map(item => item.tested);
+    const completed = filteredData.map(item => item.completed);
+    const reworked = filteredData.map(item => item.reworked);
 
-chartInstanceRef.current = new Chart(ctx, {
-type: 'bar',
-data: {
-labels,
-datasets: [
-{
-label: 'Meters Tested',
-data: tested,
-backgroundColor: '#a78bfa',  // light purple
-borderColor: '#7c3aed',
-borderWidth: 1
-},
-{
-label: 'Meters Completed',
-data: completed,
-backgroundColor: '#34d399',
-borderColor: '#10b981',
-borderWidth: 1
-},
-{
-label: 'Meters Reworked',
-data: reworked,
-backgroundColor: '#f472b6',  // pink/magenta
-borderColor: '#db2777', 
-borderWidth: 1
-}
-]
-},
-options: {
-responsive: true,
-maintainAspectRatio: false,
-layout: { padding: 10 },
-plugins: {
-legend: { position: 'top' },
-title: {
-display: true,
-text: 'Monthly Meter Testing Analysis',
-font: { size: 18, weight: 'bold', family: 'Poppins' },
-color: '#333',
-padding: { top: 10, bottom: 10 }
-},
-datalabels: {
-display: false
-}
-},
-scales: {
-y: {
-beginAtZero: true,
-title: { display: true, text: 'Number of Meters', color: '#333' }
-},
-x: {
-title: { display: true, text: 'Date', color: '#333' },
-ticks: {
-maxRotation: 45,
-minRotation: 0,
-autoSkip: true,
-maxTicksLimit: 12
-}
-}
-}
-}
-});
-}, [filteredData]);
+    chartInstanceRef.current = new Chart(ctx, {
+      type: 'bar',
+      data: {
+        labels,
+        datasets: [
+          {
+            label: 'Meters Tested',
+            data: tested,
+            backgroundColor: '#a78bfa',
+            borderColor: '#7c3aed',
+            borderWidth: 1,
+          },
+          {
+            label: 'Meters Completed',
+            data: completed,
+            backgroundColor: '#34d399',
+            borderColor: '#10b981',
+            borderWidth: 1,
+          },
+          {
+            label: 'Meters Reworked',
+            data: reworked,
+            backgroundColor: '#f472b6',
+            borderColor: '#db2777',
+            borderWidth: 1,
+          },
+        ],
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        layout: { padding: 10 },
+        plugins: {
+          legend: { position: 'top' },
+          title: {
+            display: true,
+            text: 'Monthly Meter Testing Analysis',
+            font: { size: 18, weight: 'bold', family: 'Poppins' },
+            color: '#333',
+            padding: { top: 10, bottom: 10 },
+          },
+          datalabels: { display: false },
+        },
+        scales: {
+          y: {
+            beginAtZero: true,
+            title: {
+              display: true,
+              text: 'Number of Meters',
+              color: '#333',
+            },
+          },
+          x: {
+            title: {
+              display: true,
+              text: 'Date',
+              color: '#333',
+            },
+            ticks: {
+              maxRotation: 45,
+              minRotation: 0,
+              autoSkip: true,
+              maxTicksLimit: 12,
+            },
+          },
+        },
+      },
+    });
+  }, [filteredData]);
 
-// Resize listener
-useEffect(() => {
-const handleResize = () => {
-chartInstanceRef.current?.resize();
-};
-window.addEventListener('resize', handleResize);
-return () => window.removeEventListener('resize', handleResize);
-}, []);
+  const totalTested = filteredData.reduce((acc, item) => acc + (parseInt(item.tested) || 0), 0);
+  const totalCompleted = filteredData.reduce((acc, item) => acc + (parseInt(item.completed) || 0), 0);
+  const totalReworked = filteredData.reduce((acc, item) => acc + (parseInt(item.reworked) || 0), 0);
 
-const totalTested = filteredData.reduce((acc, item) => acc + (parseInt(item.tested) || 0), 0);
-const totalCompleted = filteredData.reduce((acc, item) => acc + (parseInt(item.completed) || 0), 0);
-const totalReworked = filteredData.reduce((acc, item) => acc + (parseInt(item.reworked) || 0), 0);
-return (
+  return (
+    <>
 <div className="w-full overflow-x-hidden px-0 pb-10">
 <h1 className="text-3xl font-[poppins] text-primary">Monthly Report</h1>
 
 {/* Date & Time Display */}
 <div className="flex justify-end space-x-2 items-center mt-2">
-<p className="bg-primary text-white font-semibold w-60 h-10 rounded-lg shadow-lg flex items-center justify-center">
+<p className="bg-primary text-white font-[poppins] w-60 h-10 rounded-lg shadow-lg flex items-center justify-center">
 Date: {formattedDate}
 </p>
-<p className="bg-primary text-white font-semibold w-60 h-10 rounded-lg shadow-lg flex items-center justify-center">
+<p className="bg-primary text-white font-[poppins] w-60 h-10 rounded-lg shadow-lg flex items-center justify-center">
 Time: {formattedTime}
 </p>
 </div>
@@ -269,7 +273,7 @@ Time: {formattedTime}
 <div className="w-full md:w-auto">
 <label className="block text-base1 text-white font-[poppins]">Select Month</label>
 <select
-className="border border-white rounded p-2 w-full sm:w-64 mt-2"
+className="border border-white font-[poppins] rounded p-2 w-full sm:w-64 mt-2"
 value={selectedMonth}
 onChange={handleMonthChange}
 >
@@ -286,7 +290,7 @@ onChange={handleMonthChange}
 <div className="w-full md:w-auto">
 <label className="block text-base1 text-white font-[poppins]">Select Year</label>
 <select
-className="border border-white rounded p-2 w-full sm:w-64 mt-2"
+className="border border-white  font-[poppins] rounded p-2 w-full sm:w-64 mt-2"
 value={selectedYear}
 onChange={handleYearChange}
 >
@@ -300,7 +304,7 @@ onChange={handleYearChange}
 <div className="flex-grow text-right w-full md:w-auto">
 <button
 onClick={handleGenerateReport}
-className="bg-green-600 text-white px-4 py-2 rounded mt-6 hover:bg-gray-400 w-full md:w-auto mr-1"
+className="bg-green-600 text-white font-[poppins] px-4 py-2 rounded mt-6 hover:bg-gray-400 w-full md:w-auto mr-1"
 >
 <i className="bx bx-cog mr-2"></i> Generate
 </button>
@@ -308,7 +312,7 @@ className="bg-green-600 text-white px-4 py-2 rounded mt-6 hover:bg-gray-400 w-fu
 <button
 onClick={handleExport}
 disabled={isExportDisabled}
-className={`px-4 py-2 rounded mt-6 w-full md:w-auto ${
+className={`px-4 py-2 rounded font-[poppins] mt-6 w-full md:w-auto ${
 isExportDisabled
 ? 'bg-gray-400 cursor-not-allowed'
 : 'bg-green-600 hover:bg-gray-400 text-white'
@@ -344,7 +348,7 @@ Please wait while we fetch the data.
 {/* Entries & Search */}
 <div className="flex flex-col md:flex-row justify-between items-center mb-4 space-y-4 md:space-y-0 overflow-x-auto">
 <div className="flex items-center space-x-4 min-w-max">
-<label htmlFor="entries" className="text-gray-700 whitespace-nowrap">Show</label>
+<label htmlFor="entries" className="text-gray-700  font-[poppins] whitespace-nowrap">Show</label>
 <select
 id="entries"
 className="border border-gray-300 rounded p-2"
@@ -356,15 +360,15 @@ onChange={handleEntriesChange}
 <option value="50">50</option>
 <option value="All">All</option>
 </select>
-<span className="text-gray-700 whitespace-nowrap">entries</span>
+<span className="text-gray-700 font-[poppins] whitespace-nowrap">entries</span>
 </div>
 
 <div className="flex items-center space-x-4 min-w-max">
-<label htmlFor="search" className="text-gray-700 whitespace-nowrap">Search:</label>
+<label htmlFor="search" className="text-gray-700 font-[poppins] whitespace-nowrap">Search:</label>
 <input
 type="text"
 id="search"
-className="border border-gray-300 rounded p-2"
+className="border border-gray-300 font-[poppins] rounded p-2"
 value={search}
 onChange={handleSearchChange}
 />
@@ -376,26 +380,26 @@ onChange={handleSearchChange}
 <table className="min-w-full bg-white table-auto">
 <thead>
 <tr>
-<th className="border text-center text-base bg-primary text-white px-4 py-2">Date</th>
-<th className="border text-center text-base bg-primary text-white px-4 py-2">Tested</th>
-<th className="border text-center text-base bg-primary text-white px-4 py-2">Completed</th>
-<th className="border text-center text-base bg-primary text-white px-4 py-2">Reworked</th>
+<th className="border text-center text-base bg-primary font-[poppins] text-white px-4 py-2">Date</th>
+<th className="border text-center text-base bg-primary font-[poppins]  text-white px-4 py-2">Tested</th>
+<th className="border text-center text-base bg-primary font-[poppins] text-white px-4 py-2">Completed</th>
+<th className="border text-center text-base bg-primary font-[poppins] text-white px-4 py-2">Reworked</th>
 </tr>
 </thead>
 <tbody>
 {paginatedData.length === 0 ? (
 <tr>
-<td colSpan="4" className="text-center py-4 text-gray-500">
+<td colSpan="4" className="text-center font-[poppins] py-4 text-gray-500">
 No data available for the selected Month && Year or search.
 </td>
 </tr>
 ) : (
 paginatedData.map((item, index) => (
 <tr key={index}>
-<td className="border text-center px-4 py-2">{item.date}</td>
-<td className="border text-center px-4 py-2">{item.tested}</td>
-<td className="border text-center px-4 py-2">{item.completed}</td>
-<td className="border text-center px-4 py-2">{item.reworked}</td>
+<td className="border text-center font-[poppins] px-4 py-2">{item.date}</td>
+<td className="border text-center font-[poppins] px-4 py-2">{item.tested}</td>
+<td className="border text-center font-[poppins] px-4 py-2">{item.completed}</td>
+<td className="border text-center font-[poppins] px-4 py-2">{item.reworked}</td>
 </tr>
 ))
 )}
@@ -413,7 +417,7 @@ Showing {Math.min((currentPage - 1) * itemsPerPage + 1, filteredData.length)} to
 <button
 onClick={() => handlePageChange(currentPage - 1)}
 disabled={currentPage === 1}
-className="px-4 py-2 bg-white border rounded disabled:opacity-50 shrink-0"
+className="px-4 py-2 bg-white border font-[poppins] rounded disabled:opacity-50 shrink-0"
 >
 Previous
 </button>
@@ -431,7 +435,7 @@ currentPage === index + 1 ? 'bg-primary text-white' : 'bg-white'
 <button
 onClick={() => handlePageChange(currentPage + 1)}
 disabled={currentPage === totalPages}
-className="px-4 py-2 bg-white border rounded disabled:opacity-50 shrink-0"
+className="px-4 py-2 bg-white border font-[poppins] rounded disabled:opacity-50 shrink-0"
 >
 Next
 </button>
@@ -470,6 +474,7 @@ Next
 </div>
 )}
 </div>
+</>
 );
 };
 

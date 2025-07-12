@@ -22,12 +22,15 @@ completed = 0,
 bgColor = 'from-blue-500 to-blue-700',
 icon = 'sun',
 title = 'Shift',
+disableHover = false,
 }) => {
 const IconComponent = iconMap[icon] || iconMap['sun'];
 
 return (
 <div
-className={`p-6 rounded-3xl bg-gradient-to-br ${bgColor} text-white shadow-2xl transition-all duration-300 transform hover:scale-105 hover:shadow-[0_10px_30px_rgba(0,0,0,0.4)]`}
+className={`p-6 rounded-3xl bg-gradient-to-br ${bgColor} text-white shadow-2xl transition-all duration-300 transform ${
+disableHover ? '' : 'hover:scale-105 hover:shadow-[0_10px_30px_rgba(0,0,0,0.4)]'
+}`}
 >
 <div className="flex justify-between items-center mb-4">
 <div>

@@ -1,118 +1,361 @@
-import { useState, useRef, useEffect } from 'react';
-import { AnimatePresence, motion } from 'framer-motion';
-import { Chart as ChartJS, ArcElement, Tooltip, Legend } from 'chart.js';
+import { useState, useEffect, useMemo } from 'react';
+import { Pie, Bar } from 'react-chartjs-2';
+import ChartDataLabels from 'chartjs-plugin-datalabels';
+import {
+  Chart as ChartJS,
+  CategoryScale,
+  LinearScale,
+  BarElement,
+  LineElement,
+  PointElement,
+  ArcElement,
+  Title,
+  Tooltip,
+  Legend,
+} from 'chart.js';
+import { motion, AnimatePresence } from 'framer-motion';
+import ChatBot from './chatbot';
+import StarCard from '../components/StarCard';
+import { useWindowSize } from '@react-hook/window-size';
 
-ChartJS.register(ArcElement, Tooltip, Legend);
-
-const ChatBot = () => {
-const [open, setOpen] = useState(false);
-const [input, setInput] = useState('');
-const [messages, setMessages] = useState([]);
-const messagesEndRef = useRef(null);
-
-
-useEffect(() => {
-messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-}, [messages]);
-
-const handleSend = async () => {
-if (!input.trim()) return;
-setMessages((prev) => [...prev, { text: input, sender: 'user' }]);
-setInput('');
-
-try {
-const res = await fetch('http://localhost:5000/api/chat/sendMail', {
-method: 'POST',
-headers: { 'Content-Type': 'application/json' },
-body: JSON.stringify({ message: input }),
-});
-if (res.ok) {
-setMessages((prev) => [
-...prev,
-{ text: '✅ Your message has been emailed.', sender: 'bot' },
-]);
-} else {
-throw new Error();
-}
-} catch {
-setMessages((prev) => [
-...prev,
-{ text: '❌ Failed to send. Please try again.', sender: 'bot' },
-]);
-}
-};
-
-return (
-<div className="fixed bottom-5 right-4 sm:right-6 z-50 font-poppins">
-{/* Floating Button */}
-<button
-onClick={() => setOpen((prev) => !prev)}
-className="bg-gradient-to-tr from-blue-600 to-blue-800 text-white p-4 rounded-full shadow-xl hover:scale-105 transition-transform relative"
->
-💬
-{messages.length > 0 && (
-<span className="absolute -top-2 -right-2 bg-red-500 text-white text-xs px-2 py-0.5 rounded-full shadow">
-{messages.length}
-</span>
-)}
-</button>
-
-{/* Chat Window */}
-<AnimatePresence>
-{open && (
-<motion.div
-key="chatbot"
-initial={{ opacity: 0, scale: 0.8, y: 40 }}
-animate={{ opacity: 1, scale: 1, y: 0 }}
-exit={{ opacity: 0, scale: 0.8, y: 40 }}
-transition={{ type: 'spring', stiffness: 260, damping: 20 }}
-className="w-80 max-w-[90vw] h-[470px] sm:h-[500px] mt-3 bg-white shadow-2xl rounded-xl flex flex-col overflow-hidden border border-blue-300 backdrop-blur-md"
->
-{/* Header */}
-<div className="bg-gradient-to-r from-blue-600 to-blue-800 text-white text-lg font-semibold text-center p-3">
-👩‍💻 Live Support
-</div>
-
-
-{/* Messages */}
-<div className="flex-1 px-3 py-2 overflow-y-auto bg-blue-50 space-y-2">
-{messages.map((msg, i) => (
-<div
-key={i}
-className={`max-w-[85%] px-3 py-2 rounded-xl text-sm ${
-msg.sender === 'user'
-? 'bg-blue-600 text-white self-end ml-auto'
-: 'bg-white text-gray-800 border border-blue-200 self-start'
-}`}
->
-{msg.text}
-</div>
-))}
-<div ref={messagesEndRef} />
-</div>
-
-{/* Input */}
-<div className="flex p-2 border-t border-gray-200 bg-white">
-<input
-type="text"
-className="flex-1 border border-gray-300 px-3 py-2 rounded-l-lg text-sm focus:outline-none"
-placeholder="Type your message..."
-value={input}
-onChange={(e) => setInput(e.target.value)}
-onKeyDown={(e) => e.key === 'Enter' && handleSend()}
-/>
-<button
-onClick={handleSend}
-className="bg-blue-600 text-white px-4 rounded-r-lg hover:bg-blue-700 transition"
->
-Send
-</button>
-</div>
-</motion.div>
-)}
-</AnimatePresence>
-</div>
+ChartJS.register(
+  CategoryScale,
+  LinearScale,
+  BarElement,
+  ArcElement,
+  LineElement,
+  PointElement,
+  Title,
+  Tooltip,
+  Legend,
+  ChartDataLabels
 );
+
+const shiftLabels = [
+  '06:00 - 08:00', '08:00 - 10:00', '10:00 - 12:00', '12:00 - 14:00',
+  '14:00 - 16:00', '16:00 - 18:00', '18:00 - 20:00', '20:00 - 22:00',
+  '22:00 - 00:00', '00:00 - 02:00', '02:00 - 04:00', '04:00 - 06:00'
+];
+
+const daysOfWeek = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+const icons = ['sun', 'briefcase', 'sun', 'moon', 'sun', 'briefcase', 'moon'];
+const colors = [
+  'from-sky-400 to-sky-600',
+  'from-purple-400 to-purple-600',
+  'from-yellow-400 to-yellow-600',
+  'from-indigo-400 to-indigo-600',
+  'from-green-400 to-green-600',
+  'from-pink-400 to-pink-600',
+  'from-blue-400 to-blue-600',
+];
+
+// 🔹 Get current week's Sun–Sat range
+const getWeekRange = (offset = 0) => {
+  const today = new Date();
+  const day = today.getDay();
+  const sunday = new Date(today);
+  sunday.setDate(today.getDate() - day - offset * 7);
+  const saturday = new Date(sunday);
+  saturday.setDate(sunday.getDate() + 6);
+
+  const formatShort = (d) =>
+    `${d.toLocaleDateString('en-GB', { weekday: 'short' })} ${d.toLocaleDateString('en-GB')}`;
+
+  return {
+    short: `${formatShort(sunday)} - ${formatShort(saturday)}`
+  };
 };
 
-export default ChatBot;
+const getWeeksOfCurrentMonth = () => {
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = now.getMonth();
+
+  const weeks = [];
+
+  const firstOfMonth = new Date(year, month, 1);
+  const lastOfMonth = new Date(year, month + 1, 0);
+
+  // Start from Sunday before (or on) the 1st
+  const startDate = new Date(firstOfMonth);
+  startDate.setDate(firstOfMonth.getDate() - firstOfMonth.getDay());
+
+  const formatShort = (d) =>
+    `${d.toLocaleDateString('en-GB', { weekday: 'short' })} ${d.toLocaleDateString('en-GB')}`;
+
+  let current = new Date(startDate);
+
+  while (current <= lastOfMonth) {
+    const sunday = new Date(current);
+    const saturday = new Date(current);
+    saturday.setDate(sunday.getDate() + 6);
+
+    // ✅ INCLUDE week only if ANY day in the range is within the current month
+    const weekIncludesMonthDay = [...Array(7)].some((_, i) => {
+      const d = new Date(sunday);
+      d.setDate(sunday.getDate() + i);
+      return d.getMonth() === month;
+    });
+
+    if (weekIncludesMonthDay) {
+      weeks.push({
+        label: `${formatShort(sunday)} - ${formatShort(saturday)}`,
+        total: Math.floor(Math.random() * 12000) + 3000,
+        completed: Math.floor(Math.random() * 9000) + 2000,
+      });
+    }
+
+    current.setDate(current.getDate() + 7);
+  }
+
+  return weeks;
+};
+
+
+
+const Dashboard = () => {
+  const [selectedRange, setSelectedRange] = useState('Present Day');
+  const [currentDate, setCurrentDate] = useState(new Date());
+  const [redLineValue, setRedLineValue] = useState(5000);
+  const [completedTotal, setCompletedTotal] = useState(2800);
+  const [reworkedTotal, setReworkedTotal] = useState(400);
+  const [width] = useWindowSize();
+
+  const previousMonthWeeks = useMemo(() => getWeeksOfCurrentMonth(), []);
+  const formattedDate = currentDate.toLocaleDateString('en-GB');
+  const formattedTime = currentDate.toLocaleTimeString();
+  const weekRangePresent = getWeekRange(0);
+
+  useEffect(() => {
+    const interval = setInterval(() => setCurrentDate(new Date()), 1000);
+    return () => clearInterval(interval);
+  }, []);
+
+  useEffect(() => {
+    setCompletedTotal(Math.floor(Math.random() * 5000) + 1000);
+    setReworkedTotal(Math.floor(Math.random() * 1000));
+  }, [selectedRange]);
+
+  const generateHourlyData = () => shiftLabels.map(() => Math.floor(Math.random() * 3000));
+
+  const dataByRange = useMemo(() => ({
+    'Present Day': generateHourlyData(),
+    'Previous Day': generateHourlyData(),
+    'Present Week': Array(7).fill().map(() => Math.floor(Math.random() * 15000)),
+    'Previous Weeks': previousMonthWeeks.map(w => w.total),
+  }), [previousMonthWeeks]);
+
+  const getBarChartData = (selectedRange) => {
+    const threshold = redLineValue;
+    const isWeek = selectedRange === 'Present Week' || selectedRange === 'Previous Weeks';
+
+    const labels = selectedRange === 'Present Week'
+      ? daysOfWeek
+      : selectedRange === 'Previous Weeks'
+        ? previousMonthWeeks.map(w => w.label)
+        : shiftLabels;
+
+    const rawData = dataByRange[selectedRange] || [];
+
+    const thresholdLine = Array(labels.length).fill(threshold);
+
+    return {
+      labels,
+      datasets: [
+        {
+          label: 'Completed',
+          data: rawData,
+          backgroundColor: 'rgba(34, 197, 94, 0.7)',
+          borderColor: 'rgba(22, 163, 74, 1)',
+          borderWidth: 1,
+          borderRadius: 6,
+          type: 'bar',
+        },
+        {
+          label: `Threshold (${threshold})`,
+          data: thresholdLine,
+          borderColor: 'rgba(239, 68, 68, 1)',
+          borderWidth: 2,
+          borderDash: [5, 5],
+          pointRadius: 0,
+          type: 'line',
+        },
+      ],
+    };
+  };
+
+  const getValidPieData = (completed, reworked) => {
+    const total = completed + reworked;
+    if (total === 0) return null;
+    const percent = (val) => Math.round((val / total) * 100);
+    return {
+      labels: [`Completed (${percent(completed)}%)`, `Reworked (${percent(reworked)}%)`],
+      datasets: [
+        {
+          data: [completed, reworked],
+          backgroundColor: ['rgba(34, 197, 94, 0.9)', 'rgba(239, 68, 68, 0.9)'],
+          borderWidth: 1,
+        },
+      ],
+    };
+  };
+
+  const pieData = useMemo(() => getValidPieData(completedTotal, reworkedTotal), [completedTotal, reworkedTotal]);
+  const barData = useMemo(() => getBarChartData(selectedRange), [selectedRange, redLineValue]);
+
+  const chartOptions = {
+    responsive: true,
+    maintainAspectRatio: false,
+    plugins: {
+      datalabels: { display: false },
+      tooltip: { enabled: true },
+      legend: {
+        position: 'bottom',
+        labels: { font: { size: 13 } },
+      },
+    },
+    scales: { y: { beginAtZero: true } },
+    animation: { duration: 800, easing: 'easeOutQuart' },
+  };
+
+  return (
+    <main className="p-4 font-poppins">
+      <div className="flex flex-col sm:flex-row justify-between sm:items-end p-2 mb-4 gap-4">
+        <div>
+          <h1 className="text-2xl sm:text-3xl text-primary">Dashboard</h1>
+          <div className="mt-3 flex flex-col sm:flex-row gap-3 sm:items-end">
+            <select
+              value={selectedRange}
+              onChange={(e) => setSelectedRange(e.target.value)}
+              className="border border-gray-300 rounded-lg px-3 py-2 text-base w-full sm:w-38"
+            >
+              <option value="Present Day">Present Day</option>
+              <option value="Previous Day">Previous Day</option>
+              <option value="Present Week">Present Week</option>
+              <option value="Previous Weeks">Previous Weeks</option>
+            </select>
+            <div className="flex flex-col w-full sm:w-auto">
+              <label className="text-sm font-medium text-gray-700 mb-1">Threshold Point</label>
+              <input
+                type="number"
+                value={redLineValue}
+                onChange={(e) => setRedLineValue(Number(e.target.value))}
+                className="border border-gray-300 rounded-lg px-3 py-2 w-full sm:w-32 text-sm"
+              />
+            </div>
+          </div>
+        </div>
+        <div className="flex flex-col sm:flex-row gap-2">
+          <div className="bg-primary text-white px-4 py-2 rounded-lg shadow text-center">Date: {formattedDate}</div>
+          <div className="bg-primary text-white px-4 py-2 rounded-lg shadow text-center">Time: {formattedTime}</div>
+        </div>
+      </div>
+
+      <AnimatePresence mode="wait">
+        {['Present Day', 'Previous Day'].includes(selectedRange) && (
+          <motion.div
+            key={selectedRange}
+            className="grid gap-4 grid-cols-1 sm:grid-cols-2 md:grid-cols-4 mb-6"
+            initial="hidden"
+            animate="visible"
+            exit="hidden"
+          >
+            {[0, 1, 2, 3].map((i) => (
+              <motion.div key={i} custom={i} initial="hidden" animate="visible">
+                <StarCard
+                  total={3000 + i * 500}
+                  completed={2500 + i * 400}
+                  bgColor={colors[i]}
+                  icon={icons[i]}
+                  title={['Present Day', 'Shift 1', 'Shift 2', 'Shift 3'][i]}
+                />
+              </motion.div>
+            ))}
+          </motion.div>
+        )}
+
+        {selectedRange === 'Present Week' && (
+          <motion.div
+            key="present-week"
+            className="grid gap-4 grid-cols-1 sm:grid-cols-2 md:grid-cols-4 mb-6"
+            initial="hidden"
+            animate="visible"
+            exit="hidden"
+          >
+            <motion.div className="col-span-full">
+              <StarCard
+                total={dataByRange['Present Week'].reduce((a, b) => a + b, 0)}
+                completed={dataByRange['Present Week'].reduce((a, b) => a + b, 0) * 0.85}
+                bgColor="from-cyan-500 to-blue-500"
+                icon="calendarWeek"
+                title={`Present Week (${weekRangePresent.short})`}
+                disableHover
+              />
+            </motion.div>
+            {daysOfWeek.map((day, i) => (
+              <motion.div key={day}>
+                <StarCard
+                  total={4000 + i * 300}
+                  completed={3000 + i * 200}
+                  bgColor={colors[i % colors.length]}
+                  icon={icons[i % icons.length]}
+                  title={day}
+                  disableHover
+                />
+              </motion.div>
+            ))}
+          </motion.div>
+        )}
+
+        {selectedRange === 'Previous Weeks' && (
+          <motion.div
+            key="previous-weeks"
+            className="grid gap-4 grid-cols-1 sm:grid-cols-2 md:grid-cols-4 mb-6"
+            initial="hidden"
+            animate="visible"
+            exit="hidden"
+          >
+            {previousMonthWeeks.map((week, i) => (
+              <motion.div key={i}>
+                <StarCard
+                  total={week.total}
+                  completed={week.completed}
+                  bgColor={colors[i % colors.length]}
+                  icon={icons[i % icons.length]}
+                  title={week.label}
+                  disableHover
+                />
+              </motion.div>
+            ))}
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      <section className="bg-white rounded-2xl shadow-lg p-6 mt-4">
+        <h2 className="text-2xl font-bold text-center text-gray-700 mb-6">Meter Analysis Dashboard</h2>
+        <div className="grid grid-cols-1 md:grid-cols-5 gap-6">
+          <div className="md:col-span-1 p-4 rounded-xl bg-gray-50 shadow">
+            <h3 className="text-lg font-semibold text-gray-700 mb-4">Status Pie</h3>
+            <div className="h-[250px]">
+              {pieData ? (
+                <Pie data={pieData} options={{ responsive: true, plugins: { legend: { position: 'bottom' } } }} />
+              ) : (
+                <div className="text-gray-400 text-sm">No data to display</div>
+              )}
+            </div>
+          </div>
+          <div className="md:col-span-4 p-4 rounded-xl bg-gray-50 shadow">
+            <h3 className="text-lg font-semibold text-gray-700 mb-4">Progress Chart</h3>
+            <div className="h-[250px]">
+              <Bar data={barData} options={chartOptions} />
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <ChatBot />
+    </main>
+  );
+};
+
+export default Dashboard;

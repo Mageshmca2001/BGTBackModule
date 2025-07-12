@@ -1,8 +1,10 @@
+// DailyReports.jsx
 import { useState, useEffect, useRef } from 'react';
 import axios from 'axios';
 import ExcelJS from 'exceljs';
 import { saveAs } from 'file-saver';
 import Chart from 'chart.js/auto';
+import { format, subDays } from 'date-fns';
 
 const DailyReports = () => {
 useEffect(() => {
@@ -28,12 +30,34 @@ const interval = setInterval(() => setDateTime(new Date()), 1000);
 return () => clearInterval(interval);
 }, []);
 
-const formattedDate = dateTime.toLocaleDateString("en-GB", {
-day: "2-digit",
-month: "2-digit",
-year: "numeric",
+const formattedDate = dateTime.toLocaleDateString('en-GB', {
+day: '2-digit',
+month: '2-digit',
+year: 'numeric',
 });
 const formattedTime = dateTime.toLocaleTimeString();
+
+const getDaySummary = () => {
+const today = new Date();
+const previousDay = subDays(today, 1);
+const startDate = subDays(today, 7);
+
+if (selectedDay === '01') {
+return `${format(today, 'EEEE dd/MM/yyyy hh:mm:ss a')}`;
+}
+
+if (selectedDay === '02') {
+return `${format(previousDay, 'EEEE dd/MM/yyyy')}`;
+}
+
+if (selectedDay === '03') {
+return `From ${format(startDate, 'EEEE dd/MM/yyyy')} to ${format(previousDay, 'EEEE dd/MM/yyyy')}`;
+}
+
+return '';
+};
+
+const daySummary = getDaySummary();
 
 const totalTested = filteredData.reduce((acc, item) => acc + (parseInt(item.tested) || 0), 0);
 const totalCompleted = filteredData.reduce((acc, item) => acc + (parseInt(item.completed) || 0), 0);
@@ -81,14 +105,29 @@ try {
 setLoading(true);
 const response = await axios.get("https://frontend-1-lunu.onrender.com/admin");
 const fetchedData = response.data;
-
 let filteredByDay;
+
+const today = new Date();
+const todayStr = format(today, 'yyyy-MM-dd');
+const previousDay = subDays(today, 1);
+const previousDayStr = format(previousDay, 'yyyy-MM-dd');
+const fromDate = subDays(today, 7);
+
 if (selectedDay === "01") {
-filteredByDay = fetchedData.filter((item) => item.hours.startsWith("08"));
+filteredByDay = fetchedData.filter((item) => {
+const itemDate = new Date(item.date);
+return format(itemDate, 'yyyy-MM-dd') === todayStr;
+});
 } else if (selectedDay === "02") {
-filteredByDay = fetchedData.filter((item) => item.hours.startsWith("09"));
+filteredByDay = fetchedData.filter((item) => {
+const itemDate = new Date(item.date);
+return format(itemDate, 'yyyy-MM-dd') === previousDayStr;
+});
 } else if (selectedDay === "03") {
-filteredByDay = fetchedData;
+filteredByDay = fetchedData.filter((item) => {
+const itemDate = new Date(item.date);
+return itemDate >= fromDate && itemDate <= previousDay;
+});
 } else {
 filteredByDay = [];
 }
@@ -184,7 +223,7 @@ datasets: [
 {
 label: 'Meters Tested',
 data: tested,
-backgroundColor: '#a78bfa',  // light purple
+backgroundColor: '#a78bfa',
 borderColor: '#7c3aed',
 borderWidth: 1
 },
@@ -198,8 +237,8 @@ borderWidth: 1
 {
 label: 'Meters Reworked',
 data: reworked,
-backgroundColor: '#f472b6',  // pink/magenta
-borderColor: '#db2777', 
+backgroundColor: '#f472b6',
+borderColor: '#db2777',
 borderWidth: 1
 }
 ]
@@ -245,7 +284,6 @@ return (
 <div className="w-full overflow-x-hidden px-0 sm:px-0 pb-10">
 <h1 className="text-3xl font-[poppins] text-primary">Daily Report</h1>
 
-{/* Date & Time */}
 <div className="flex flex-col sm:flex-row justify-end sm:space-x-4 mt-2 space-y-2 sm:space-y-0">
 <p className="bg-primary text-white font-[poppins] w-full sm:w-60 h-10 rounded-lg shadow-lg flex items-center justify-center">
 Date: {formattedDate}
@@ -255,16 +293,16 @@ Time: {formattedTime}
 </p>
 </div>
 
-{/* Filter Section */}
 <div className="bg-primary p-4 rounded shadow-md mt-4">
 <div className="flex flex-col md:flex-row md:items-end gap-4">
-<div className="w-full md:w-1/2">
-<label htmlFor="selectDay" className="block text-base1 text-white font-[poppins]">
+<div className="w-full md:w-2/3">
+<label htmlFor="selectDay" className="block text-base1 text-white font-[poppins] mb-2">
 Select Day
 </label>
+<div className="flex flex-col sm:flex-row gap-2">
 <select
 id="selectDay"
-className="border border-white rounded p-2 w-full sm:w-64 mt-2"
+className="border border-white font-[poppins] rounded p-2 w-full sm:w-60"
 value={selectedDay}
 onChange={handleSelectDayChange}
 >
@@ -273,6 +311,14 @@ onChange={handleSelectDayChange}
 <option value="02">Previous Day</option>
 <option value="03">Last 7 Days</option>
 </select>
+<input
+type="text"
+readOnly
+value={daySummary}
+placeholder="Selected date summary"
+className="bg-white text-primary font-[poppins] border rounded p-2 w-full sm:w-60"
+/>
+</div>
 </div>
 
 <div className="flex-grow text-right w-full md:w-auto">
@@ -286,8 +332,7 @@ className="bg-green-600 text-white px-4 py-2 rounded mt-6 hover:bg-gray-400 w-fu
 <button
 onClick={handleExport}
 disabled={isExportDisabled}
-className={`px-4 py-2 rounded mt-6 w-full md:w-auto ${
-isExportDisabled
+className={`px-4 py-2 rounded mt-6 w-full md:w-auto ${isExportDisabled
 ? 'bg-gray-400 cursor-not-allowed'
 : 'bg-green-600 hover:bg-gray-400 text-white'
 }`}
@@ -322,10 +367,10 @@ Please wait while we fetch the data.
 {/* Entries & Search */}
 <div className="flex flex-col md:flex-row justify-between items-center mb-4 space-y-4 md:space-y-0">
 <div className="flex items-center space-x-4 min-w-max">
-<label htmlFor="entries" className="text-gray-700 whitespace-nowrap">Show</label>
+<label htmlFor="entries" className="text-gray-700 font-[poppins] whitespace-nowrap">Show</label>
 <select
 id="entries"
-className="border border-gray-300 rounded p-2"
+className="border border-gray-300 font-[poppins]  rounded p-2"
 value={entries}
 onChange={handleEntriesChange}
 >
@@ -334,15 +379,15 @@ onChange={handleEntriesChange}
 <option value="50">50</option>
 <option value="All">All</option>
 </select>
-<span className="text-gray-700 whitespace-nowrap">entries</span>
+<span className="text-gray-700 font-[poppins]  whitespace-nowrap">entries</span>
 </div>
 
 <div className="flex items-center space-x-4 min-w-max">
-<label htmlFor="search" className="text-gray-700 whitespace-nowrap">Search:</label>
+<label htmlFor="search" className="text-gray-700 font-[poppins] whitespace-nowrap">Search:</label>
 <input
 type="text"
 id="search"
-className="border border-gray-300 rounded p-2"
+className="border border-gray-300 font-[poppins] rounded p-2"
 value={search}
 onChange={handleSearchChange}
 />
@@ -354,26 +399,26 @@ onChange={handleSearchChange}
 <table className="min-w-full bg-white table-auto">
 <thead>
 <tr>
-<th className="border text-center text-base bg-primary text-white px-4 py-2">Hours</th>
-<th className="border text-center text-base bg-primary text-white px-4 py-2">Tested</th>
-<th className="border text-center text-base bg-primary text-white px-4 py-2">Completed</th>
-<th className="border text-center text-base bg-primary text-white px-4 py-2">Reworked</th>
+<th className="border text-center text-base font-[poppins] bg-primary text-white px-4 py-2">Hours</th>
+<th className="border text-center text-base font-[poppins] bg-primary text-white px-4 py-2">Tested</th>
+<th className="border text-center text-base font-[poppins] bg-primary text-white px-4 py-2">Completed</th>
+<th className="border text-center text-base font-[poppins] bg-primary text-white px-4 py-2">Reworked</th>
 </tr>
 </thead>
 <tbody>
 {paginatedData.length === 0 ? (
 <tr>
-<td colSpan="4" className="text-center py-4 text-gray-500">
+<td colSpan="4" className="text-center font-[poppins] py-4 text-gray-500">
 No data available for the selected day or search.
 </td>
 </tr>
 ) : (
 paginatedData.map((item, index) => (
 <tr key={index}>
-<td className="border text-center px-4 py-2">{item.hours}</td>
-<td className="border text-center px-4 py-2">{item.tested}</td>
-<td className="border text-center px-4 py-2">{item.completed}</td>
-<td className="border text-center px-4 py-2">{item.reworked}</td>
+<td className="border text-center font-[poppins] px-4 py-2">{item.hours}</td>
+<td className="border text-center font-[poppins] px-4 py-2">{item.tested}</td>
+<td className="border text-center font-[poppins] px-4 py-2">{item.completed}</td>
+<td className="border text-center font-[poppins] px-4 py-2">{item.reworked}</td>
 </tr>
 ))
 )}
@@ -391,7 +436,7 @@ Showing {Math.min((currentPage - 1) * itemsPerPage + 1, filteredData.length)} to
 <button
 onClick={() => handlePageChange(currentPage - 1)}
 disabled={currentPage === 1}
-className="px-4 py-2 bg-white border rounded disabled:opacity-50 shrink-0"
+className="px-4 py-2 bg-white  font-[poppins] border rounded disabled:opacity-50 shrink-0"
 >
 Previous
 </button>
@@ -409,7 +454,7 @@ currentPage === index + 1 ? 'bg-primary text-white' : 'bg-white'
 <button
 onClick={() => handlePageChange(currentPage + 1)}
 disabled={currentPage === totalPages}
-className="px-4 py-2 bg-white border rounded disabled:opacity-50 shrink-0"
+className="px-4 py-2 bg-white  font-[poppins] border rounded disabled:opacity-50 shrink-0"
 >
 Next
 </button>
