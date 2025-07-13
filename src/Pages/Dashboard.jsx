@@ -447,44 +447,78 @@ title={title}
 )}
 
 {selectedRange === 'Present Week' && (
-<motion.div key="present-week" className="grid gap-4" initial={{ opacity: 0, y: 100 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -50 }}>
-<div className="grid grid-cols-1">
+<motion.div
+key="present-week"
+className="grid gap-4"
+initial={{ opacity: 0, y: 100 }}
+animate={{ opacity: 1, y: 0 }}
+exit={{ opacity: 0, y: -50 }}
+>
+<div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-4 w-full">
+<motion.div
+key="week-summary"
+initial={{ opacity: 0, scale: 0.95 }}
+animate={{ opacity: 1, scale: 1 }}
+transition={{ duration: 0.3 }}
+>
 <StarCard
 total={data?.presentWeek?.total || 0}
 completed={data?.presentWeek?.completed || 0}
 bgColor="from-cyan-500 to-blue-500"
 icon="calendarWeek"
-title={`Present Week (${weekRangePresent.short})`}
+title="Present Week"
 disableHover
 />
-</div>
+</motion.div>
 
-<div className="overflow-x-auto">
-<div className="flex gap-4 min-w-full">
-{[
-{ day: 'Sunday', icon: 'sun', color: 'from-sky-400 to-sky-600' },
-{ day: 'Monday', icon: 'briefcase', color: 'from-purple-400 to-purple-600' },
-{ day: 'Tuesday', icon: 'sun', color: 'from-yellow-400 to-yellow-600' },
-{ day: 'Wednesday', icon: 'moon', color: 'from-indigo-400 to-indigo-600' },
-{ day: 'Thursday', icon: 'sun', color: 'from-green-400 to-green-600' },
-{ day: 'Friday', icon: 'briefcase', color: 'from-pink-400 to-pink-600' },
-{ day: 'Saturday', icon: 'moon', color: 'from-blue-400 to-blue-600' },
-].map((d, i) => (
-<div key={i} className="min-w-[220px]">
+{(() => {
+const today = new Date();
+const startOfWeek = new Date(today);
+startOfWeek.setDate(today.getDate() - today.getDay()); // Sunday
+
+const dayInfo = [
+{ label: 'Sunday', icon: 'sun', color: 'from-sky-400 to-sky-600' },
+{ label: 'Monday', icon: 'briefcase', color: 'from-purple-400 to-purple-600' },
+{ label: 'Tuesday', icon: 'sun', color: 'from-yellow-400 to-yellow-600' },
+{ label: 'Wednesday', icon: 'moon', color: 'from-indigo-400 to-indigo-600' },
+{ label: 'Thursday', icon: 'sun', color: 'from-green-400 to-green-600' },
+{ label: 'Friday', icon: 'briefcase', color: 'from-pink-400 to-pink-600' },
+{ label: 'Saturday', icon: 'moon', color: 'from-blue-400 to-blue-600' },
+];
+
+return dayInfo.map((d, i) => {
+const date = new Date(startOfWeek);
+date.setDate(startOfWeek.getDate() + i);
+const dateLabel = date.toLocaleDateString('en-GB', {
+day: '2-digit',
+month: 'short',
+});
+
+return (
+<motion.div
+key={i}
+initial={{ opacity: 0, scale: 0.95 }}
+animate={{ opacity: 1, scale: 1 }}
+transition={{ delay: i * 0.05 }}
+>
 <StarCard
 total={1000}
-completed={800}
+completed={data?.presentWeek?.dailyCompleted?.[i] || 0}
 bgColor={d.color}
 icon={d.icon}
-title={d.day}
+title={`${d.label} (${dateLabel})`}
 disableHover
 />
+</motion.div>
+);
+});
+})()}
 </div>
-))}
-</div>
-</div>
+
 </motion.div>
 )}
+
+
 
 {selectedRange === 'Previous Weeks' && (
 <motion.div
