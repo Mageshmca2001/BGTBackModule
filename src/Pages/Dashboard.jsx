@@ -18,6 +18,7 @@ import ChatBot from './chatbot';
 import { useWindowSize } from '@react-hook/window-size';
 import StarCard from '../components/StarCard';
 
+// Register ChartJS plugins
 ChartJS.register(
 CategoryScale,
 LinearScale,
@@ -99,11 +100,9 @@ const [error, setError] = useState(null);
 const [selectedRange, setSelectedRange] = useState('Present Day');
 const [currentDate, setCurrentDate] = useState(new Date());
 const [redLineValue, setRedLineValue] = useState(1000);
-const [width] = useWindowSize();
 
 const formattedDate = currentDate.toLocaleDateString('en-GB');
 const formattedTime = currentDate.toLocaleTimeString();
-const weekRangePresent = getWeekRange(0);
 
 useEffect(() => {
 const interval = setInterval(() => setCurrentDate(new Date()), 1000);
@@ -177,7 +176,7 @@ if (selectedRange === 'Present Week') {
 const { completed = 0, total = 0 } = data.presentWeek || {};
 return { completed, reworked: total - completed };
 }
-if (selectedRange === 'Previous Weeks') {
+if (selectedRange === 'Previous Week') {
 const totalCompleted = data.previousWeeks?.reduce((sum, w) => sum + (w.completed || 0), 0);
 const total = data.previousWeeks?.reduce((sum, w) => sum + (w.total || 0), 0);
 return { completed: totalCompleted, reworked: total - totalCompleted };
@@ -192,13 +191,10 @@ labels: ['Completed', 'Reworked'],
 datasets: [
 {
 data: [completed, reworked],
-backgroundColor: [
-'rgba(34, 197, 94, 0.85)', // green
-'rgba(239, 68, 68, 0.85)'  // red
-],
+backgroundColor: ['rgba(34, 197, 94, 0.85)', 'rgba(239, 68, 68, 0.85)'],
 borderColor: '#fff',
 borderWidth: 2,
-hoverOffset: 10,
+hoverOffset: 10
 }
 ]
 }), [completed, reworked]);
@@ -206,7 +202,7 @@ hoverOffset: 10,
 const pieChartOptions = {
 responsive: true,
 maintainAspectRatio: false,
-cutout: '60%', // donut effect
+cutout: '60%',
 plugins: {
 datalabels: {
 display: (ctx) => {
@@ -220,102 +216,28 @@ const total = data.reduce((a, b) => a + b, 0);
 return total === 0 ? '' : `${((value / total) * 100).toFixed(1)}%`;
 },
 color: '#fff',
-font: {
-weight: 'bold',
-size: 14,
-family: 'Poppins'
-}
+font: { weight: 'bold', size: 14, family: 'Poppins' }
 },
 tooltip: {
-enabled: true,
-callbacks: {
-label: (ctx) => {
-const label = ctx.label;
-const value = ctx.raw;
-return `${label}: ${value}`;
-}
-}
+enabled: true
 },
 legend: {
 position: 'bottom',
-labels: {
-font: {
-family: 'Poppins',
-size: 13
+labels: { font: { family: 'Poppins', size: 13 }, color: '#4B5563' }
 },
-color: '#4B5563'
-}
-},
-// Custom plugin for center text
 beforeDraw: (chart) => {
-const { width } = chart;
-const { height } = chart;
-const ctx = chart.ctx;
+const { width, height, ctx } = chart;
 ctx.restore();
 const fontSize = (height / 130).toFixed(2);
 ctx.font = `${fontSize}em Poppins`;
 ctx.textBaseline = 'middle';
-
-const completed = chart.data.datasets[0].data[0];
-const total = chart.data.datasets[0].data.reduce((a, b) => a + b, 0);
-const percent = total ? ((completed / total) * 100).toFixed(0) : 0;
+const percent = completed + reworked > 0 ? ((completed / (completed + reworked)) * 100).toFixed(0) : 0;
 const text = `${percent}% Done`;
-
 const textX = Math.round((width - ctx.measureText(text).width) / 2);
 const textY = height / 2;
-ctx.fillStyle = '#1F2937'; // dark gray
+ctx.fillStyle = '#1F2937';
 ctx.fillText(text, textX, textY);
 ctx.save();
-}
-}
-};
-
-
-// Loading animation
-// Loading animation
-const LoadingDots = () => (
-<div className="flex justify-center items-center h-screen text-2xl text-blue-600 font-poppins">
-Loading
-<span className="animate-bounce mx-1">.</span>
-<span className="animate-bounce mx-1 delay-150">.</span>
-<span className="animate-bounce mx-1 delay-300">.</span>
-</div>
-);
-
-
-const barChartOptions = {
-responsive: true,
-maintainAspectRatio: false,
-plugins: {
-datalabels: { display: false },
-tooltip: {
-enabled: true,
-mode: 'index',
-intersect: false,
-callbacks: {
-label: function (context) {
-const label = context.dataset.label || '';
-const value = context.parsed.y;
-if (label === 'Threshold') return `🔴 ${label}: ${value}`;
-if (label === 'Completed') return `🟦 ${label}: ${value}`;
-return `${label}: ${value}`;
-}
-}
-},
-legend: {
-position: 'top',
-labels: { font: { size: 13 } }
-}
-},
-interaction: {
-mode: 'index',
-intersect: false
-},
-scales: {
-y: {
-beginAtZero: true,
-suggestedMax: redLineValue + 500,
-ticks: { stepSize: 200 }
 }
 }
 };
@@ -331,24 +253,29 @@ dataPoints = data?.previousDay?.hourlyCompleted || [];
 } else if (selectedRange === 'Present Week') {
 labels = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
 dataPoints = data?.presentWeek?.dailyCompleted || [];
+} else if (selectedRange === 'Previous Week') {
+labels = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+dataPoints = [900, 1000, 950, 920, 910, 880, 840]; // Hardcoded like your card section
 } else if (selectedRange === 'Previous Weeks') {
 labels = data?.previousWeeks?.map((w, i) => `Week ${i + 1}`);
-dataPoints = data?.previousWeeks?.map(w =>
-Math.round((w.hourlyCompleted?.reduce((a, b) => a + b, 0) || 0) / 13)
+dataPoints = data?.previousWeeks?.map(
+(w) => Math.round((w.hourlyCompleted?.reduce((a, b) => a + b, 0) || 0) / 13)
 );
 }
 
-const completedDataset = {
+return {
+labels,
+datasets: [
+{
 label: 'Completed',
 data: dataPoints,
-backgroundColor: 'rgba(59, 130, 246, 0.7)',
-borderColor: 'rgba(37, 99, 235, 1)',
+backgroundColor: 'rgba(34, 197, 94, 0.7)',
+borderColor: 'rgba(22, 163, 74, 1)',
 borderWidth: 1,
 borderRadius: 6,
 type: 'bar'
-};
-
-const thresholdDataset = {
+},
+{
 label: 'Threshold',
 data: Array(dataPoints.length).fill(redLineValue),
 borderColor: 'rgba(239, 68, 68, 1)',
@@ -357,16 +284,25 @@ borderDash: [5, 5],
 pointRadius: 0,
 fill: false,
 type: 'line'
-};
-
-return {
-labels,
-datasets: [completedDataset, thresholdDataset]
+},
+{
+label: 'Tracking Line',
+data: dataPoints,
+borderColor: 'rgba(59, 130, 246, 1)',
+backgroundColor: 'transparent',
+borderWidth: 2,
+pointRadius: 3,
+tension: 0.3,
+type: 'line'
+}
+]
 };
 }, [selectedRange, data, redLineValue]);
 
-if (loading) return <LoadingDots />;
+
+if (loading) return <div className="flex justify-center items-center h-screen text-2xl text-blue-600 font-poppins">Loading...</div>;
 if (error) return <div className="text-center text-red-600 mt-10 font-semibold font-poppins">Error: {error}</div>;
+
 return (
 <>
 <main className="flex-1 px-2 sm:px-4 md:px-2 pb-8 overflow-x-hidden font-poppins">
@@ -382,7 +318,7 @@ className="border border-gray-300 rounded-lg px-3 py-2 text-base w-full sm:w-38"
 <option value="Present Day">Present Day</option>
 <option value="Previous Day">Previous Day</option>
 <option value="Present Week">Present Week</option>
-<option value="Previous Weeks">Previous Weeks</option>
+<option value="Previous Week">Previous Week</option>
 </select>
 <div className="flex flex-col w-full sm:w-auto">
 <label className="text-sm font-medium text-gray-700 mb-1">Threshold Point</label>
@@ -520,36 +456,76 @@ disableHover
 
 
 
-{selectedRange === 'Previous Weeks' && (
+{selectedRange === 'Previous Week' && (
 <motion.div
-key="prev-weeks"
-className="grid gap-4 grid-cols-1 sm:grid-cols-2 md:grid-cols-4"
+key="prev-week"
+className="grid gap-4"
 initial={{ opacity: 0, y: 100 }}
 animate={{ opacity: 1, y: 0 }}
 exit={{ opacity: 0, y: -50 }}
 >
-{data?.previousWeeks?.map((week, i) => (
-<motion.div key={i} custom={i} initial="hidden" animate="visible">
-<StarCard
-total={week.total}
-completed={week.completed}
-bgColor={[
+{(() => {
+const today = new Date();
+const dayOfWeek = today.getDay();
+const sunday = new Date(today);
+sunday.setDate(today.getDate() - dayOfWeek - 7);
+
+const dailyCompleted = [900, 1000, 950, 920, 910, 880, 840];
+const weekTotal = 7000;
+const weekCompleted = 6400;
+
+const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+const icons = ['sun', 'briefcase', 'sun', 'moon', 'sun', 'briefcase', 'moon'];
+const colors = [
 'from-sky-400 to-sky-600',
 'from-purple-400 to-purple-600',
 'from-yellow-400 to-yellow-600',
 'from-indigo-400 to-indigo-600',
 'from-green-400 to-green-600',
 'from-pink-400 to-pink-600',
-'from-blue-400 to-blue-600',
-][i % 7]}
-icon={['sun', 'briefcase', 'sun', 'moon', 'sun', 'briefcase', 'moon'][i % 7]}
-title={`Week ${i + 1}: ${week.label}`}
+'from-blue-400 to-blue-600'
+];
+
+return (
+<div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-4 w-full">
+{/* Week Summary Card */}
+<StarCard
+total={weekTotal}
+completed={weekCompleted}
+bgColor="from-cyan-500 to-blue-500"
+icon="calendarWeek"
+title="Previous Week"
 disableHover
 />
-</motion.div>
-))}
+
+{/* Daily Cards */}
+{dailyCompleted.map((value, i) => {
+const date = new Date(sunday);
+date.setDate(sunday.getDate() + i);
+const dateLabel = date.toLocaleDateString('en-GB', {
+day: '2-digit',
+month: 'short'
+});
+
+return (
+<StarCard
+key={i}
+total={1000}
+completed={value}
+bgColor={colors[i]}
+icon={icons[i]}
+title={`${dayNames[date.getDay()]} (${dateLabel})`}
+disableHover
+/>
+);
+})}
+</div>
+);
+})()}
 </motion.div>
 )}
+
+
 </AnimatePresence>
 </section>
 
@@ -568,7 +544,7 @@ disableHover
 {/* Bar Chart */}
 <div className="md:col-span-4 p-4 rounded-xl bg-gray-50 shadow">
 <h3 className="text-lg font-semibold text-gray-700 mb-4">
-{['Present Day', 'Previous Day','Present week','Previous weeks'].includes(selectedRange) ? 'Hourly Progress' : 'Weekly Progress'}
+{['Present Day', 'Previous Day','Present week','Previous week'].includes(selectedRange) ? 'Hourly Progress' : 'Weekly Progress'}
 </h3>
 <div className="h-[250px]">
 <Bar data={{

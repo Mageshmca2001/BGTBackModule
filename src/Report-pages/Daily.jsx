@@ -281,14 +281,15 @@ grid: { display: false }
 }, [filteredData]);
 
 return (
-<div className="w-full overflow-x-hidden px-0 sm:px-0 pb-10">
+<div className="w-full overflow-x-hidden px-0 pb-10">
 <h1 className="text-3xl font-[poppins] text-primary">Daily Report</h1>
 
-<div className="flex flex-col sm:flex-row justify-end sm:space-x-4 mt-2 space-y-2 sm:space-y-0">
-<p className="bg-primary text-white font-[poppins] w-full sm:w-60 h-10 rounded-lg shadow-lg flex items-center justify-center">
+{/* Date & Time Display */}
+<div className="flex justify-end space-x-2 items-center mt-2">
+<p className="bg-primary text-white font-[poppins] w-60 h-10 rounded-lg shadow-lg flex items-center justify-center">
 Date: {formattedDate}
 </p>
-<p className="bg-primary text-white font-[poppins] w-full sm:w-60 h-10 rounded-lg shadow-lg flex items-center justify-center">
+<p className="bg-primary text-white font-[poppins] w-60 h-10 rounded-lg shadow-lg flex items-center justify-center">
 Time: {formattedTime}
 </p>
 </div>

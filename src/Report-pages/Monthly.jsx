@@ -4,255 +4,255 @@ import { saveAs } from 'file-saver';
 import Chart from 'chart.js/auto';
 
 const Monthly = () => {
-  const [selectedMonth, setSelectedMonth] = useState('');
-  const [selectedYear, setSelectedYear] = useState('');
-  const [entries, setEntries] = useState('10');
-  const [search, setSearch] = useState('');
-  const [filteredData, setFilteredData] = useState([]);
-  const [data, setData] = useState([]);
-  const [currentPage, setCurrentPage] = useState(1);
-  const [itemsPerPage, setItemsPerPage] = useState(10);
-  const [dateTime, setDateTime] = useState(new Date());
-  const [loading, setLoading] = useState(false);
-  const [modalMessage, setModalMessage] = useState('');
-  const [showModal, setShowModal] = useState(false);
-  const isExportDisabled = filteredData.length === 0;
+const [selectedMonth, setSelectedMonth] = useState('');
+const [selectedYear, setSelectedYear] = useState('');
+const [entries, setEntries] = useState('10');
+const [search, setSearch] = useState('');
+const [filteredData, setFilteredData] = useState([]);
+const [data, setData] = useState([]);
+const [currentPage, setCurrentPage] = useState(1);
+const [itemsPerPage, setItemsPerPage] = useState(10);
+const [dateTime, setDateTime] = useState(new Date());
+const [loading, setLoading] = useState(false);
+const [modalMessage, setModalMessage] = useState('');
+const [showModal, setShowModal] = useState(false);
+const isExportDisabled = filteredData.length === 0;
 
-  const chartRef = useRef(null);
-  const chartInstanceRef = useRef(null);
+const chartRef = useRef(null);
+const chartInstanceRef = useRef(null);
 
-  useEffect(() => {
-    document.title = 'BGT - Monthly Report';
-  }, []);
+useEffect(() => {
+document.title = 'BGT - Monthly Report';
+}, []);
 
-  useEffect(() => {
-    const interval = setInterval(() => setDateTime(new Date()), 1000);
-    return () => clearInterval(interval);
-  }, []);
+useEffect(() => {
+const interval = setInterval(() => setDateTime(new Date()), 1000);
+return () => clearInterval(interval);
+}, []);
 
-  const formattedDate = dateTime.toLocaleDateString('en-GB', {
-    day: '2-digit',
-    month: '2-digit',
-    year: 'numeric',
-  });
-  const formattedTime = dateTime.toLocaleTimeString();
+const formattedDate = dateTime.toLocaleDateString('en-GB', {
+day: '2-digit',
+month: '2-digit',
+year: 'numeric',
+});
+const formattedTime = dateTime.toLocaleTimeString();
 
-  const totalPages = Math.ceil(filteredData.length / itemsPerPage);
+const totalPages = Math.ceil(filteredData.length / itemsPerPage);
 
-  const handleMonthChange = (e) => setSelectedMonth(e.target.value);
-  const handleYearChange = (e) => setSelectedYear(e.target.value);
+const handleMonthChange = (e) => setSelectedMonth(e.target.value);
+const handleYearChange = (e) => setSelectedYear(e.target.value);
 
-  const handleEntriesChange = (e) => {
-    const value = e.target.value;
-    setEntries(value);
-    const length = value === 'All' ? filteredData.length || data.length : parseInt(value, 10);
-    setItemsPerPage(length);
-    setCurrentPage(1);
-  };
+const handleEntriesChange = (e) => {
+const value = e.target.value;
+setEntries(value);
+const length = value === 'All' ? filteredData.length || data.length : parseInt(value, 10);
+setItemsPerPage(length);
+setCurrentPage(1);
+};
 
-  const handleSearchChange = (e) => {
-    const searchValue = e.target.value.toLowerCase();
-    setSearch(searchValue);
-    const filtered = data.filter((item) =>
-      (item.date && item.date.toLowerCase().includes(searchValue)) ||
-      (item.tested && item.tested.toString().includes(searchValue)) ||
-      (item.completed && item.completed.toString().includes(searchValue)) ||
-      (item.reworked && item.reworked.toString().includes(searchValue))
-    );
-    setFilteredData(filtered);
-    setCurrentPage(1);
-  };
+const handleSearchChange = (e) => {
+const searchValue = e.target.value.toLowerCase();
+setSearch(searchValue);
+const filtered = data.filter((item) =>
+(item.date && item.date.toLowerCase().includes(searchValue)) ||
+(item.tested && item.tested.toString().includes(searchValue)) ||
+(item.completed && item.completed.toString().includes(searchValue)) ||
+(item.reworked && item.reworked.toString().includes(searchValue))
+);
+setFilteredData(filtered);
+setCurrentPage(1);
+};
 
-  const fetchWithTimeout = (url, options = {}, timeout = 10000) => {
-    return Promise.race([
-      fetch(url, options),
-      new Promise((_, reject) => setTimeout(() => reject(new Error('Request timeout')), timeout)),
-    ]);
-  };
+const fetchWithTimeout = (url, options = {}, timeout = 10000) => {
+return Promise.race([
+fetch(url, options),
+new Promise((_, reject) => setTimeout(() => reject(new Error('Request timeout')), timeout)),
+]);
+};
 
-  const handleGenerateReport = async () => {
-    if (!selectedMonth || !selectedYear) {
-      setModalMessage('Please select both month and year to generate the report.');
-      setShowModal(true);
-      return;
-    }
+const handleGenerateReport = async () => {
+if (!selectedMonth || !selectedYear) {
+setModalMessage('Please select both month and year to generate the report.');
+setShowModal(true);
+return;
+}
 
-    try {
-      setLoading(true);
-      const response = await fetchWithTimeout('https://frontend-2-vt1l.onrender.com/admin');
-      const json = await response.json();
+try {
+setLoading(true);
+const response = await fetchWithTimeout('https://frontend-2-vt1l.onrender.com/admin');
+const json = await response.json();
 
-      let result = json.filter((item) => item.date);
+let result = json.filter((item) => item.date);
 
-      result = result.filter((item) => {
-        const [day, month, year] = item.date.split('.');
-        return month === selectedMonth && year === selectedYear;
-      });
+result = result.filter((item) => {
+const [day, month, year] = item.date.split('.');
+return month === selectedMonth && year === selectedYear;
+});
 
-      if (entries === 'All') {
-        setItemsPerPage(result.length);
-      }
+if (entries === 'All') {
+setItemsPerPage(result.length);
+}
 
-      setData(result);
-      setFilteredData(result);
-      setCurrentPage(1);
-    } catch (error) {
-      console.error('❌ Fetch error:', error);
-      setModalMessage('Error fetching data. Please check your network or try again.');
-      setShowModal(true);
-    } finally {
-      setLoading(false);
-    }
-  };
+setData(result);
+setFilteredData(result);
+setCurrentPage(1);
+} catch (error) {
+console.error('❌ Fetch error:', error);
+setModalMessage('Error fetching data. Please check your network or try again.');
+setShowModal(true);
+} finally {
+setLoading(false);
+}
+};
 
-  const handleExport = async () => {
-    try {
-      const workbook = new ExcelJS.Workbook();
-      const worksheet = workbook.addWorksheet('MonthlyReports');
+const handleExport = async () => {
+try {
+const workbook = new ExcelJS.Workbook();
+const worksheet = workbook.addWorksheet('MonthlyReports');
 
-      const header = ['Date', 'Tested', 'Completed', 'Reworked'];
-      const headerRow = worksheet.addRow(header);
-      headerRow.font = { bold: true };
-      headerRow.alignment = { vertical: 'middle', horizontal: 'center' };
+const header = ['Date', 'Tested', 'Completed', 'Reworked'];
+const headerRow = worksheet.addRow(header);
+headerRow.font = { bold: true };
+headerRow.alignment = { vertical: 'middle', horizontal: 'center' };
 
-      worksheet.columns = [
-        { width: 18 },
-        { width: 12 },
-        { width: 14 },
-        { width: 14 },
-      ];
+worksheet.columns = [
+{ width: 18 },
+{ width: 12 },
+{ width: 14 },
+{ width: 14 },
+];
 
-      filteredData.forEach(item => {
-        const row = worksheet.addRow([
-          item.date || '',
-          item.tested || 0,
-          item.completed || 0,
-          item.reworked || 0,
-        ]);
-        row.alignment = { vertical: 'middle', horizontal: 'center' };
-      });
+filteredData.forEach(item => {
+const row = worksheet.addRow([
+item.date || '',
+item.tested || 0,
+item.completed || 0,
+item.reworked || 0,
+]);
+row.alignment = { vertical: 'middle', horizontal: 'center' };
+});
 
-      const summaryStart = filteredData.length + 3;
-      const summaryTitle = worksheet.getCell(`A${summaryStart}`);
-      summaryTitle.value = 'Total Summary';
-      summaryTitle.font = { bold: true, size: 12 };
-      summaryTitle.alignment = { vertical: 'middle', horizontal: 'center' };
+const summaryStart = filteredData.length + 3;
+const summaryTitle = worksheet.getCell(`A${summaryStart}`);
+summaryTitle.value = 'Total Summary';
+summaryTitle.font = { bold: true, size: 12 };
+summaryTitle.alignment = { vertical: 'middle', horizontal: 'center' };
 
-      const summaryRows = [
-        ['Total Tested', totalTested],
-        ['Total Completed', totalCompleted],
-        ['Total Reworked', totalReworked],
-      ];
+const summaryRows = [
+['Total Tested', totalTested],
+['Total Completed', totalCompleted],
+['Total Reworked', totalReworked],
+];
 
-      summaryRows.forEach(([label, value]) => {
-        const row = worksheet.addRow([label, value]);
-        row.alignment = { vertical: 'middle', horizontal: 'center' };
-      });
+summaryRows.forEach(([label, value]) => {
+const row = worksheet.addRow([label, value]);
+row.alignment = { vertical: 'middle', horizontal: 'center' };
+});
 
-      const buffer = await workbook.xlsx.writeBuffer();
-      const blob = new Blob([buffer], { type: 'application/octet-stream' });
-      saveAs(blob, 'MonthlyReports.xlsx');
-    } catch (error) {
-      console.error('❌ Excel export error:', error);
-    }
-  };
+const buffer = await workbook.xlsx.writeBuffer();
+const blob = new Blob([buffer], { type: 'application/octet-stream' });
+saveAs(blob, 'MonthlyReports.xlsx');
+} catch (error) {
+console.error('❌ Excel export error:', error);
+}
+};
 
-  const handlePageChange = (page) => setCurrentPage(page);
+const handlePageChange = (page) => setCurrentPage(page);
 
-  const paginatedData = filteredData.slice(
-    (currentPage - 1) * itemsPerPage,
-    currentPage * itemsPerPage
-  );
+const paginatedData = filteredData.slice(
+(currentPage - 1) * itemsPerPage,
+currentPage * itemsPerPage
+);
 
-  useEffect(() => {
-    if (!chartRef.current || filteredData.length === 0) return;
+useEffect(() => {
+if (!chartRef.current || filteredData.length === 0) return;
 
-    const ctx = chartRef.current.getContext('2d');
-    if (chartInstanceRef.current) {
-      chartInstanceRef.current.destroy();
-    }
+const ctx = chartRef.current.getContext('2d');
+if (chartInstanceRef.current) {
+chartInstanceRef.current.destroy();
+}
 
-    const labels = filteredData.map(item => item.date);
-    const tested = filteredData.map(item => item.tested);
-    const completed = filteredData.map(item => item.completed);
-    const reworked = filteredData.map(item => item.reworked);
+const labels = filteredData.map(item => item.date);
+const tested = filteredData.map(item => item.tested);
+const completed = filteredData.map(item => item.completed);
+const reworked = filteredData.map(item => item.reworked);
 
-    chartInstanceRef.current = new Chart(ctx, {
-      type: 'bar',
-      data: {
-        labels,
-        datasets: [
-          {
-            label: 'Meters Tested',
-            data: tested,
-            backgroundColor: '#a78bfa',
-            borderColor: '#7c3aed',
-            borderWidth: 1,
-          },
-          {
-            label: 'Meters Completed',
-            data: completed,
-            backgroundColor: '#34d399',
-            borderColor: '#10b981',
-            borderWidth: 1,
-          },
-          {
-            label: 'Meters Reworked',
-            data: reworked,
-            backgroundColor: '#f472b6',
-            borderColor: '#db2777',
-            borderWidth: 1,
-          },
-        ],
-      },
-      options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        layout: { padding: 10 },
-        plugins: {
-          legend: { position: 'top' },
-          title: {
-            display: true,
-            text: 'Monthly Meter Testing Analysis',
-            font: { size: 18, weight: 'bold', family: 'Poppins' },
-            color: '#333',
-            padding: { top: 10, bottom: 10 },
-          },
-          datalabels: { display: false },
-        },
-        scales: {
-          y: {
-            beginAtZero: true,
-            title: {
-              display: true,
-              text: 'Number of Meters',
-              color: '#333',
-            },
-          },
-          x: {
-            title: {
-              display: true,
-              text: 'Date',
-              color: '#333',
-            },
-            ticks: {
-              maxRotation: 45,
-              minRotation: 0,
-              autoSkip: true,
-              maxTicksLimit: 12,
-            },
-          },
-        },
-      },
-    });
-  }, [filteredData]);
+chartInstanceRef.current = new Chart(ctx, {
+type: 'bar',
+data: {
+labels,
+datasets: [
+{
+label: 'Meters Tested',
+data: tested,
+backgroundColor: '#a78bfa',
+borderColor: '#7c3aed',
+borderWidth: 1,
+},
+{
+label: 'Meters Completed',
+data: completed,
+backgroundColor: '#34d399',
+borderColor: '#10b981',
+borderWidth: 1,
+},
+{
+label: 'Meters Reworked',
+data: reworked,
+backgroundColor: '#f472b6',
+borderColor: '#db2777',
+borderWidth: 1,
+},
+],
+},
+options: {
+responsive: true,
+maintainAspectRatio: false,
+layout: { padding: 10 },
+plugins: {
+legend: { position: 'top' },
+title: {
+display: true,
+text: 'Monthly Meter Testing Analysis',
+font: { size: 18, weight: 'bold', family: 'Poppins' },
+color: '#333',
+padding: { top: 10, bottom: 10 },
+},
+datalabels: { display: false },
+},
+scales: {
+y: {
+beginAtZero: true,
+title: {
+display: true,
+text: 'Number of Meters',
+color: '#333',
+},
+},
+x: {
+title: {
+display: true,
+text: 'Date',
+color: '#333',
+},
+ticks: {
+maxRotation: 45,
+minRotation: 0,
+autoSkip: true,
+maxTicksLimit: 12,
+},
+},
+},
+},
+});
+}, [filteredData]);
 
-  const totalTested = filteredData.reduce((acc, item) => acc + (parseInt(item.tested) || 0), 0);
-  const totalCompleted = filteredData.reduce((acc, item) => acc + (parseInt(item.completed) || 0), 0);
-  const totalReworked = filteredData.reduce((acc, item) => acc + (parseInt(item.reworked) || 0), 0);
+const totalTested = filteredData.reduce((acc, item) => acc + (parseInt(item.tested) || 0), 0);
+const totalCompleted = filteredData.reduce((acc, item) => acc + (parseInt(item.completed) || 0), 0);
+const totalReworked = filteredData.reduce((acc, item) => acc + (parseInt(item.reworked) || 0), 0);
 
-  return (
-    <>
+return (
+<>
 <div className="w-full overflow-x-hidden px-0 pb-10">
 <h1 className="text-3xl font-[poppins] text-primary">Monthly Report</h1>
 

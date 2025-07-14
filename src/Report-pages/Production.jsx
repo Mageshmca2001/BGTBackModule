@@ -4,7 +4,7 @@ import { toBinary } from '../utils/binary';
 
 const Production = () => {
 // Maintenance Mode Toggle
-const maintenanceMode = true; // Change to false to show full app
+const maintenanceMode = false; // Change to false to show full app
 
 const [finalParameters, setFinalParameters] = useState([]);
 const [finalMatchedParameters, setFinalMatchedParameters] = useState(null);
