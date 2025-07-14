@@ -12,34 +12,78 @@ messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
 
 const handleSend = async () => {
 if (!input.trim()) return;
-setMessages((prev) => [...prev, { text: input, sender: 'user' }]);
+
+// Add user's message
+const newMessages = [
+...messages,
+{ text: input, sender: 'user' },
+];
+setMessages(newMessages);
+
+// Generate bot reply
+const botReply = getBotReply(input);
+
+setMessages((prev) => [...prev, { text: botReply, sender: 'bot' }]);
 setInput('');
 
+// Count user messages
+const userMessagesCount = newMessages.filter(
+(msg) => msg.sender === 'user'
+).length;
+
+// Send mail only if it's the 24th message
+if (userMessagesCount % 24 === 0) {
 try {
 const res = await fetch('http://localhost:5000/api/chat/sendMail', {
 method: 'POST',
 headers: { 'Content-Type': 'application/json' },
-body: JSON.stringify({ message: input }),
+body: JSON.stringify({
+message: `User has sent ${userMessagesCount} messages.`,
+}),
 });
+
 if (res.ok) {
 setMessages((prev) => [
 ...prev,
-{ text: '✅ Your message has been emailed.', sender: 'bot' },
+{
+text: `📧 Automatic mail sent for ${userMessagesCount} messages!`,
+sender: 'bot',
+},
 ]);
 } else {
 throw new Error();
 }
-} catch {
+} catch (err) {
 setMessages((prev) => [
 ...prev,
-{ text: '❌ Failed to send. Please try again.', sender: 'bot' },
+{
+text: '❌ Failed to send mail. Please try again later.',
+sender: 'bot',
+},
 ]);
 }
+}
+};
+
+const getBotReply = (text) => {
+const lower = text.toLowerCase();
+
+if (lower.includes('not loading')) {
+return '🔍 Please check your internet connection and try refreshing the page.';
+}
+if (lower.includes('data')) {
+return '📊 The data source might be incorrect. Double-check your settings.';
+}
+if (lower.includes('slow')) {
+return '🐢 The server might be busy. Please wait a moment and try again.';
+}
+
+return '🤖 I see. Could you tell me more about the issue?';
 };
 
 return (
 <div className="fixed bottom-5 right-4 sm:right-6 z-50 font-poppins">
-{/* Floating Chat Button */}
+{/* Floating Button */}
 <button
 onClick={() => setOpen((prev) => !prev)}
 className="bg-gradient-to-tr from-blue-600 to-blue-800 text-white p-4 rounded-full shadow-xl hover:scale-105 transition-transform relative"
@@ -47,7 +91,7 @@ className="bg-gradient-to-tr from-blue-600 to-blue-800 text-white p-4 rounded-fu
 💬
 {messages.length > 0 && (
 <span className="absolute -top-2 -right-2 bg-red-500 text-white text-xs px-2 py-0.5 rounded-full shadow">
-{messages.length}
+{messages.filter((msg) => msg.sender === 'user').length}
 </span>
 )}
 </button>
