@@ -346,12 +346,12 @@ Please wait while we fetch the data.
 ) : (
 <>
 {/* Entries & Search */}
-<div className="flex flex-col md:flex-row justify-between items-center mb-4 space-y-4 md:space-y-0 overflow-x-auto">
+<div className="flex flex-col md:flex-row justify-between items-center mb-4 space-y-4 md:space-y-0">
 <div className="flex items-center space-x-4 min-w-max">
-<label htmlFor="entries" className="text-gray-700  font-[poppins] whitespace-nowrap">Show</label>
+<label htmlFor="entries" className="text-gray-700 font-[poppins] whitespace-nowrap">Show</label>
 <select
 id="entries"
-className="border border-gray-300 rounded p-2"
+className="border border-gray-300 font-[poppins]  rounded p-2"
 value={entries}
 onChange={handleEntriesChange}
 >
@@ -360,7 +360,7 @@ onChange={handleEntriesChange}
 <option value="50">50</option>
 <option value="All">All</option>
 </select>
-<span className="text-gray-700 font-[poppins] whitespace-nowrap">entries</span>
+<span className="text-gray-700 font-[poppins]  whitespace-nowrap">entries</span>
 </div>
 
 <div className="flex items-center space-x-4 min-w-max">

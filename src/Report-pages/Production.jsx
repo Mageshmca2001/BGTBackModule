@@ -1,10 +1,8 @@
 import { useState, useEffect } from 'react';
 import axios from 'axios';
-import { toBinary } from '../utils/binary';
 
 const Production = () => {
-// Maintenance Mode Toggle
-const maintenanceMode = false; // Change to false to show full app
+const maintenanceMode = true;
 
 const [finalParameters, setFinalParameters] = useState([]);
 const [finalMatchedParameters, setFinalMatchedParameters] = useState(null);
@@ -17,6 +15,8 @@ const [selectedBench, setSelectedBench] = useState('');
 const [selectedNIC, setSelectedNIC] = useState('');
 const [showStageOne, setShowStageOne] = useState(false);
 const [matchedCalibration, setMatchedCalibration] = useState(null);
+
+const isExportDisabled = !finalMatchedParameters;
 
 useEffect(() => {
 document.title = 'BGT - Meter Report';
@@ -56,11 +56,11 @@ return;
 
 const generatedSerial = `${selectedLine}${selectedBench}${selectedNIC}`.replace(/\s+/g, '').toLowerCase();
 
-const matched = finalParameters.find(p =>
-p?.PCBSerialNumber?.trim().toLowerCase() === generatedSerial
+const matched = finalParameters.find(
+(p) => p?.PCBSerialNumber?.trim().toLowerCase() === generatedSerial
 );
-const matchedCalib = calibrationData.find(c =>
-c?.PCBSerialNumber?.trim().toLowerCase() === generatedSerial
+const matchedCalib = calibrationData.find(
+(c) => c?.PCBSerialNumber?.trim().toLowerCase() === generatedSerial
 );
 
 if (matched) {
@@ -77,7 +77,22 @@ setNotFoundMessage({ visible: true, message: 'Serial Number was not found in rec
 };
 
 const handleExport = () => {
-console.log('📤 Exporting data:', filteredData);
+if (!finalMatchedParameters) return;
+
+const exportData = [finalMatchedParameters];
+const csvContent = [
+Object.keys(exportData[0]).join(','),
+Object.values(exportData[0]).join(','),
+].join('\n');
+
+const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+const url = URL.createObjectURL(blob);
+const link = document.createElement('a');
+link.href = url;
+link.setAttribute('download', 'matched_report.csv');
+document.body.appendChild(link);
+link.click();
+document.body.removeChild(link);
 };
 
 return (
@@ -103,8 +118,10 @@ Time: {formattedTime}
 </div>
 
 <div className="bg-primary p-4 rounded shadow-md mt-4">
-<div className="flex flex-wrap md:flex-nowrap space-y-4 md:space-y-0 md:space-x-4 items-end">
-<div className="w-full md:w-1/3">
+<div className="flex flex-wrap sm:flex-nowrap items-end justify-between gap-4">
+{/* DROPDOWNS LEFT */}
+<div className="flex flex-wrap sm:flex-nowrap gap-4 items-end w-full sm:w-auto">
+<div className="w-full sm:w-64">
 <label className="block text-white font-[poppins]">Line</label>
 <select
 value={selectedLine}
@@ -117,7 +134,7 @@ className="border border-gray-300 rounded p-2 w-full mt-2"
 </select>
 </div>
 
-<div className="w-full md:w-1/3">
+<div className="w-full sm:w-64">
 <label className="block text-white font-[poppins]">Bench</label>
 <select
 value={selectedBench}
@@ -130,7 +147,7 @@ className="border border-gray-300 rounded p-2 w-full mt-2"
 </select>
 </div>
 
-<div className="w-full md:w-1/3">
+<div className="w-full sm:w-64">
 <label className="block text-white font-[poppins]">NIC</label>
 <select
 value={selectedNIC}
@@ -142,23 +159,31 @@ className="border border-gray-300 rounded p-2 w-full mt-2"
 <option value="NIC2">NIC 2</option>
 </select>
 </div>
+</div>
 
-<div className="w-full md:w-auto flex space-x-2 mt-6">
+
+{/* BUTTONS RIGHT */}
+
+<div className="flex-grow text-right w-full md:w-auto">
 <button
 onClick={handleGenerateReport}
-className="flex items-center justify-center space-x-2 bg-green-600 text-white px-6 py-2 rounded hover:bg-green-700 transition-all duration-200"
+className="bg-green-600 text-white font-[poppins] px-4 py-2 rounded mt-6 hover:bg-gray-400 w-full md:w-auto mr-1"
 >
-<i className="bx bx-cog text-lg"></i>
-<span>Generate</span>
+<i className="bx bx-cog mr-2"></i> Generate
 </button>
-
+<span title={isExportDisabled ? 'Generate report first' : ''}>
 <button
 onClick={handleExport}
-className="flex items-center justify-center space-x-2 bg-green-600 text-white px-6 py-2 rounded hover:bg-green-700 transition-all duration-200"
+disabled={isExportDisabled}
+className={`px-4 py-2 rounded font-[poppins] mt-6 w-full md:w-auto ${
+isExportDisabled
+? 'bg-gray-400 cursor-not-allowed'
+: 'bg-green-600 hover:bg-gray-400 text-white'
+}`}
 >
-<i className="bx bxs-file-export text-lg"></i>
-<span>Export</span>
+<i className="bx bxs-file-export mr-2"></i> Export
 </button>
+</span>
 </div>
 </div>
 </div>
@@ -183,7 +208,7 @@ OK
 <h2 className="text-2xl font-semibold text-green-700">
 Report Found for {selectedLine} {selectedBench} {selectedNIC}
 </h2>
-{/* Render your Stage components here */}
+{/* Render Stage Components here */}
 </div>
 )}
 </>

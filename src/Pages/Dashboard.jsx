@@ -1,36 +1,60 @@
+// ✅ Full Dashboard Component with Framer Motion Super Animations
+// 💡 Ensure you have 'framer-motion', 'chart.js', 'react-chartjs-2', and 'chartjs-plugin-datalabels' installed
+
 import { useState, useEffect, useMemo } from 'react';
 import { Pie, Bar } from 'react-chartjs-2';
 import ChartDataLabels from 'chartjs-plugin-datalabels';
 import {
-Chart as ChartJS,
-CategoryScale,
-LinearScale,
-BarElement,
-LineElement,
-PointElement,
-ArcElement,
-Title,
-Tooltip,
-Legend
+  Chart as ChartJS,
+  CategoryScale,
+  LinearScale,
+  BarElement,
+  LineElement,
+  PointElement,
+  ArcElement,
+  Title,
+  Tooltip,
+  Legend
 } from 'chart.js';
 import { motion, AnimatePresence } from 'framer-motion';
 import ChatBot from './chatbot';
-import { useWindowSize } from '@react-hook/window-size';
 import StarCard from '../components/StarCard';
 
-// Register ChartJS plugins
 ChartJS.register(
-CategoryScale,
-LinearScale,
-BarElement,
-ArcElement,
-LineElement,
-PointElement,
-Title,
-Tooltip,
-Legend,
-ChartDataLabels
+  CategoryScale,
+  LinearScale,
+  BarElement,
+  ArcElement,
+  LineElement,
+  PointElement,
+  Title,
+  Tooltip,
+  Legend,
+  ChartDataLabels
 );
+
+// 🌟 Animation Variants
+const containerVariants = {
+  hidden: {},
+  visible: {
+    transition: {
+      staggerChildren: 0.12,
+      delayChildren: 0.05
+    }
+  }
+};
+
+const itemVariants = {
+  hidden: { opacity: 0, y: 30 },
+  visible: {
+    opacity: 1,
+    y: 0,
+    transition: {
+      duration: 0.45,
+      ease: 'easeOut'
+    }
+  }
+};
 
 const timeData = [
 '06:00', '08:00', '10:00', '12:00', '14:00',
@@ -38,25 +62,7 @@ const timeData = [
 '02:00', '04:00', '06:00'
 ];
 
-const getWeekRange = (offset = 0) => {
-const today = new Date();
-const day = today.getDay();
-const sunday = new Date(today);
-sunday.setDate(today.getDate() - day - offset * 7);
-const saturday = new Date(sunday);
-saturday.setDate(sunday.getDate() + 6);
 
-const formatShort = (d) =>
-`${d.toLocaleDateString('en-GB', { weekday: 'short' })} ${d.toLocaleDateString('en-GB', {
-day: '2-digit',
-month: '2-digit',
-year: 'numeric'
-})}`;
-
-return {
-short: `${formatShort(sunday)} - ${formatShort(saturday)}`
-};
-};
 
 const getCurrentMonthWeeks = () => {
 const today = new Date();
@@ -299,9 +305,18 @@ type: 'line'
 };
 }, [selectedRange, data, redLineValue]);
 
+const LoadingDots = () => (
+<div className="flex justify-center items-center h-screen text-2xl text-blue-600 font-poppins">
+Loading<span className="animate-bounce mx-1">.</span>
+<span className="animate-bounce mx-1 delay-150">.</span>
+<span className="animate-bounce mx-1 delay-300">.</span>
+</div>
+);
 
-if (loading) return <div className="flex justify-center items-center h-screen text-2xl text-blue-600 font-poppins">Loading...</div>;
+// ⛔ Error or Loading
+if (loading) return <LoadingDots />;
 if (error) return <div className="text-center text-red-600 mt-10 font-semibold font-poppins">Error: {error}</div>;
+
 
 return (
 <>
@@ -347,13 +362,13 @@ Time: {formattedTime}
 {(selectedRange === 'Present Day' || selectedRange === 'Previous Day') && (
 <motion.div
 key={selectedRange}
-className="grid gap-4 grid-cols-1 sm:grid-cols-2 md:grid-cols-4"
+variants={containerVariants}
 initial="hidden"
 animate="visible"
 exit="hidden"
+className="grid gap-4 grid-cols-1 sm:grid-cols-2 md:grid-cols-4"
 >
-{/* Day Summary Card */}
-<motion.div key="summary" initial="hidden" animate="visible">
+<motion.div variants={itemVariants}>
 <StarCard
 total={data?.[selectedRange === 'Present Day' ? 'presentDay' : 'previousDay']?.total || 0}
 completed={data?.[selectedRange === 'Present Day' ? 'presentDay' : 'previousDay']?.completed || 0}
@@ -362,41 +377,31 @@ icon="sun"
 title={selectedRange}
 />
 </motion.div>
-
-{/* Shift Cards */}
-{['Shift 1', 'Shift 2', 'Shift 3'].map((title, i) => (
-<motion.div key={i} custom={i} initial="hidden" animate="visible">
+{[1, 2, 3].map((i) => (
+<motion.div key={i} variants={itemVariants}>
 <StarCard
-total={data?.[selectedRange === 'Present Day' ? 'presentDay' : 'previousDay']?.[`shift${i + 1}`] || 0}
+total={data?.[selectedRange === 'Present Day' ? 'presentDay' : 'previousDay']?.[`shift${i}`] || 0}
 completed={data?.[selectedRange === 'Present Day' ? 'presentDay' : 'previousDay']?.completed || 0}
-bgColor={[
-'from-purple-400 to-purple-600',
-'from-yellow-400 to-yellow-600',
-'from-indigo-400 to-indigo-600'
-][i]}
-icon={['briefcase', 'sun', 'moon'][i]}
-title={title}
+bgColor={["from-purple-400 to-purple-600", "from-yellow-400 to-yellow-600", "from-indigo-400 to-indigo-600"][i - 1]}
+icon={["briefcase", "sun", "moon"][i - 1]}
+title={`Shift ${i}`}
 />
 </motion.div>
 ))}
 </motion.div>
 )}
 
+{/* Present Week */}
 {selectedRange === 'Present Week' && (
 <motion.div
 key="present-week"
-className="grid gap-4"
-initial={{ opacity: 0, y: 100 }}
-animate={{ opacity: 1, y: 0 }}
-exit={{ opacity: 0, y: -50 }}
+variants={containerVariants}
+initial="hidden"
+animate="visible"
+exit="hidden"
+className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-4"
 >
-<div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-4 w-full">
-<motion.div
-key="week-summary"
-initial={{ opacity: 0, scale: 0.95 }}
-animate={{ opacity: 1, scale: 1 }}
-transition={{ duration: 0.3 }}
->
+<motion.div variants={itemVariants}>
 <StarCard
 total={data?.presentWeek?.total || 0}
 completed={data?.presentWeek?.completed || 0}
@@ -406,126 +411,81 @@ title="Present Week"
 disableHover
 />
 </motion.div>
-
-{(() => {
-const today = new Date();
-const startOfWeek = new Date(today);
-startOfWeek.setDate(today.getDate() - today.getDay()); // Sunday
-
-const dayInfo = [
-{ label: 'Sunday', icon: 'sun', color: 'from-sky-400 to-sky-600' },
-{ label: 'Monday', icon: 'briefcase', color: 'from-purple-400 to-purple-600' },
-{ label: 'Tuesday', icon: 'sun', color: 'from-yellow-400 to-yellow-600' },
-{ label: 'Wednesday', icon: 'moon', color: 'from-indigo-400 to-indigo-600' },
-{ label: 'Thursday', icon: 'sun', color: 'from-green-400 to-green-600' },
-{ label: 'Friday', icon: 'briefcase', color: 'from-pink-400 to-pink-600' },
-{ label: 'Saturday', icon: 'moon', color: 'from-blue-400 to-blue-600' },
+{[...Array(7)].map((_, i) => {
+const labels = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+const icons = ["sun", "briefcase", "sun", "moon", "sun", "briefcase", "moon"];
+const colors = [
+"from-sky-400 to-sky-600",
+"from-purple-400 to-purple-600",
+"from-yellow-400 to-yellow-600",
+"from-indigo-400 to-indigo-600",
+"from-green-400 to-green-600",
+"from-pink-400 to-pink-600",
+"from-blue-400 to-blue-600"
 ];
-
-return dayInfo.map((d, i) => {
-const date = new Date(startOfWeek);
-date.setDate(startOfWeek.getDate() + i);
-const dateLabel = date.toLocaleDateString('en-GB', {
-day: '2-digit',
-month: 'short',
-});
-
 return (
-<motion.div
-key={i}
-initial={{ opacity: 0, scale: 0.95 }}
-animate={{ opacity: 1, scale: 1 }}
-transition={{ delay: i * 0.05 }}
->
+<motion.div key={i} variants={itemVariants}>
 <StarCard
 total={1000}
 completed={data?.presentWeek?.dailyCompleted?.[i] || 0}
-bgColor={d.color}
-icon={d.icon}
-title={`${d.label} (${dateLabel})`}
+bgColor={colors[i]}
+icon={icons[i]}
+title={`${labels[i]}`}
 disableHover
 />
 </motion.div>
 );
-});
-})()}
-</div>
-
+})}
 </motion.div>
 )}
 
-
-
+{/* Previous Week */}
 {selectedRange === 'Previous Week' && (
 <motion.div
 key="prev-week"
-className="grid gap-4"
-initial={{ opacity: 0, y: 100 }}
-animate={{ opacity: 1, y: 0 }}
-exit={{ opacity: 0, y: -50 }}
+variants={containerVariants}
+initial="hidden"
+animate="visible"
+exit="hidden"
+className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-4"
 >
-{(() => {
-const today = new Date();
-const dayOfWeek = today.getDay();
-const sunday = new Date(today);
-sunday.setDate(today.getDate() - dayOfWeek - 7);
-
-const dailyCompleted = [900, 1000, 950, 920, 910, 880, 840];
-const weekTotal = 7000;
-const weekCompleted = 6400;
-
-const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
-const icons = ['sun', 'briefcase', 'sun', 'moon', 'sun', 'briefcase', 'moon'];
-const colors = [
-'from-sky-400 to-sky-600',
-'from-purple-400 to-purple-600',
-'from-yellow-400 to-yellow-600',
-'from-indigo-400 to-indigo-600',
-'from-green-400 to-green-600',
-'from-pink-400 to-pink-600',
-'from-blue-400 to-blue-600'
-];
-
-return (
-<div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-4 w-full">
-{/* Week Summary Card */}
+<motion.div variants={itemVariants}>
 <StarCard
-total={weekTotal}
-completed={weekCompleted}
+total={7000}
+completed={6400}
 bgColor="from-cyan-500 to-blue-500"
 icon="calendarWeek"
 title="Previous Week"
 disableHover
 />
-
-{/* Daily Cards */}
-{dailyCompleted.map((value, i) => {
-const date = new Date(sunday);
-date.setDate(sunday.getDate() + i);
-const dateLabel = date.toLocaleDateString('en-GB', {
-day: '2-digit',
-month: 'short'
-});
-
+</motion.div>
+{[...Array(7)].map((_, i) => {
+const labels = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+const icons = ["sun", "briefcase", "sun", "moon", "sun", "briefcase", "moon"];
+const colors = [
+"from-sky-400 to-sky-600",
+"from-purple-400 to-purple-600",
+"from-yellow-400 to-yellow-600",
+"from-indigo-400 to-indigo-600",
+"from-green-400 to-green-600",
+"from-pink-400 to-pink-600",
+"from-blue-400 to-blue-600"
+];
 return (
+<motion.div key={i} variants={itemVariants}>
 <StarCard
-key={i}
 total={1000}
-completed={value}
+completed={data?.previousWeeks?.[i]?.completed || 0}
 bgColor={colors[i]}
 icon={icons[i]}
-title={`${dayNames[date.getDay()]} (${dateLabel})`}
+title={`${labels[i]}`}
 disableHover
 />
+</motion.div>
 );
 })}
-</div>
-);
-})()}
 </motion.div>
 )}
-
-
 </AnimatePresence>
 </section>
 
