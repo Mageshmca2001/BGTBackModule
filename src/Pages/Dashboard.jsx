@@ -130,51 +130,56 @@ const res = await fetch('https://frontend-4iv0.onrender.com/0');
 if (!res.ok) throw new Error('Network error');
 const result = await res.json();
 
+const countRes = await fetch('http://localhost:5000/user/today-count');
+const countJson = await countRes.json();
+
 // ----- Present Day -----
 result.presentDay = {
-total: 3000,
-completed: 2800,
-shift1: 1000,
-shift2: 1000,
-shift3: 800,
+total: countJson.TodayCount,
+completed: countJson.TodayCount,
+shift1: Math.floor(countJson.TodayCount * 0.33),
+shift2: Math.floor(countJson.TodayCount * 0.33),
+shift3: countJson.TodayCount - (Math.floor(countJson.TodayCount * 0.33) * 2),
 hourlyCompleted: [400, 500, 600, 550, 700, 650, 600, 500, 400, 300, 250, 200, 150],
 hourlyReworked: [100, 80, 70, 60, 90, 85, 70, 60, 40, 30, 25, 20, 15]
 };
 
 // ----- Previous Day -----
 result.previousDay = {
-total: 1800,
-completed: 1600,
-shift1: 600,
-shift2: 700,
-shift3: 500,
+total: countJson.YesterdayCount,
+completed: countJson.YesterdayCount,
+shift1: Math.floor(countJson.YesterdayCount * 0.33),
+shift2: Math.floor(countJson.YesterdayCount * 0.33),
+shift3: countJson.YesterdayCount - (Math.floor(countJson.YesterdayCount * 0.33) * 2),
 hourlyCompleted: [300, 400, 350, 300, 250, 200, 180, 150, 140, 130, 120, 100, 90],
 hourlyReworked: [60, 55, 50, 40, 35, 30, 25, 20, 18, 15, 10, 8, 5]
 };
 
 // ----- Present Week -----
-const presentWeekDates = getWeekDates(); // Sunday to Saturday
+const presentWeekDates = getWeekDates();
 result.presentWeek = {
-total: 7000,
-completed: 6400,
+total: countJson.CurrentWeekCount,
+completed: countJson.CurrentWeekCount,
 dailyCompleted: presentWeekDates.map((date, i) => ({
 date: date.toISOString(),
-value: 850 + i * 10
+value: [800, 900, 950, 880, 1020, 970, 890][i],
+reworked: [50, 40, 60, 45, 55, 50, 48][i]
 }))
 };
 
 // ----- Previous Week -----
 const previousWeekDates = getWeekDates(new Date(Date.now() - 7 * 24 * 60 * 60 * 1000));
 result.previousWeek = {
-total: 7000,
-completed: 6400,
+total: countJson.PreviousWeekCount,
+completed: countJson.PreviousWeekCount,
 dailyCompleted: previousWeekDates.map((date, i) => ({
 date: date.toISOString(),
-value: 800 + i * 5
+value: [700, 720, 690, 730, 710, 740, 720][i],
+reworked: [60, 58, 65, 50, 55, 62, 59][i]
 }))
 };
 
-// ----- Previous Weeks (Month View) -----
+// Optional: Month View
 const monthWeeks = getCurrentMonthWeeks().map((week, i) => ({
 ...week,
 total: 1800 + i * 500,
@@ -197,26 +202,31 @@ return () => clearInterval(interval);
 }, []);
 
 
-
 const getPieStats = () => {
 if (!data) return { completed: 0, reworked: 0 };
+
 if (selectedRange === 'Present Day' || selectedRange === 'Previous Day') {
 const selected = selectedRange === 'Present Day' ? data.presentDay : data.previousDay;
 const completed = selected.hourlyCompleted?.reduce((a, b) => a + b, 0);
 const reworked = selected.hourlyReworked?.reduce((a, b) => a + b, 0);
 return { completed, reworked };
 }
+
 if (selectedRange === 'Present Week') {
-const { completed = 0, total = 0 } = data.presentWeek || {};
-return { completed, reworked: total - completed };
+const completed = data.presentWeek?.dailyCompleted?.reduce((sum, d) => sum + (d.value || 0), 0);
+const reworked = data.presentWeek?.dailyCompleted?.reduce((sum, d) => sum + (d.reworked || 0), 0);
+return { completed, reworked };
 }
+
 if (selectedRange === 'Previous Week') {
-const totalCompleted = data.previousWeeks?.reduce((sum, w) => sum + (w.completed || 0), 0);
-const total = data.previousWeeks?.reduce((sum, w) => sum + (w.total || 0), 0);
-return { completed: totalCompleted, reworked: total - totalCompleted };
+const completed = data.previousWeek?.dailyCompleted?.reduce((sum, d) => sum + (d.value || 0), 0);
+const reworked = data.previousWeek?.dailyCompleted?.reduce((sum, d) => sum + (d.reworked || 0), 0);
+return { completed, reworked };
 }
+
 return { completed: 0, reworked: 0 };
 };
+
 
 const { completed, reworked } = getPieStats();
 
@@ -286,10 +296,10 @@ dataPoints = data?.presentDay?.hourlyCompleted || [];
 dataPoints = data?.previousDay?.hourlyCompleted || [];
 } else if (selectedRange === 'Present Week') {
 labels = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
-dataPoints = data?.presentWeek?.dailyCompleted || [];
+dataPoints = data?.presentWeek?.dailyCompleted?.map(d => d.value) || [];
 } else if (selectedRange === 'Previous Week') {
 labels = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
-dataPoints = [900, 1000, 950, 920, 910, 880, 840]; // Hardcoded like your card section
+dataPoints = data?.previousWeek?.dailyCompleted?.map(d => d.value) || [];
 } else if (selectedRange === 'Previous Weeks') {
 labels = data?.previousWeeks?.map((w, i) => `Week ${i + 1}`);
 dataPoints = data?.previousWeeks?.map(
@@ -332,6 +342,7 @@ type: 'line'
 ]
 };
 }, [selectedRange, data, redLineValue]);
+
 
 const LoadingDots = () => (
 <div className="flex justify-center items-center h-screen text-2xl text-blue-600 font-poppins">
