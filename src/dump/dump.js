@@ -130,24 +130,28 @@ const res = await fetch('https://frontend-4iv0.onrender.com/0');
 if (!res.ok) throw new Error('Network error');
 const result = await res.json();
 
+// ✅ Fetch Today/Yesterday/Week counts
+const countRes = await fetch('http://localhost:5000/user/today-count');
+const countJson = await countRes.json();
+
 // ----- Present Day -----
 result.presentDay = {
-total: 3000,
-completed: 2800,
-shift1: 1000,
-shift2: 1000,
-shift3: 800,
+total: countJson.TodayCount,
+completed: countJson.TodayCount, // Assume completed equals total if no breakdown
+shift1: Math.floor(countJson.TodayCount * 0.33),
+shift2: Math.floor(countJson.TodayCount * 0.33),
+shift3: countJson.TodayCount - (Math.floor(countJson.TodayCount * 0.33) * 2),
 hourlyCompleted: [400, 500, 600, 550, 700, 650, 600, 500, 400, 300, 250, 200, 150],
 hourlyReworked: [100, 80, 70, 60, 90, 85, 70, 60, 40, 30, 25, 20, 15]
 };
 
 // ----- Previous Day -----
 result.previousDay = {
-total: 1800,
-completed: 1600,
-shift1: 600,
-shift2: 700,
-shift3: 500,
+total: countJson.YesterdayCount,
+completed: countJson.YesterdayCount,
+shift1: Math.floor(countJson.YesterdayCount * 0.33),
+shift2: Math.floor(countJson.YesterdayCount * 0.33),
+shift3: countJson.YesterdayCount - (Math.floor(countJson.YesterdayCount * 0.33) * 2),
 hourlyCompleted: [300, 400, 350, 300, 250, 200, 180, 150, 140, 130, 120, 100, 90],
 hourlyReworked: [60, 55, 50, 40, 35, 30, 25, 20, 18, 15, 10, 8, 5]
 };
@@ -155,26 +159,26 @@ hourlyReworked: [60, 55, 50, 40, 35, 30, 25, 20, 18, 15, 10, 8, 5]
 // ----- Present Week -----
 const presentWeekDates = getWeekDates(); // Sunday to Saturday
 result.presentWeek = {
-total: 7000,
-completed: 6400,
+total: countJson.CurrentWeekCount,
+completed: countJson.CurrentWeekCount,
 dailyCompleted: presentWeekDates.map((date, i) => ({
 date: date.toISOString(),
-value: 850 + i * 10
+value: Math.round(countJson.CurrentWeekCount / 7)
 }))
 };
 
 // ----- Previous Week -----
 const previousWeekDates = getWeekDates(new Date(Date.now() - 7 * 24 * 60 * 60 * 1000));
 result.previousWeek = {
-total: 7000,
-completed: 6400,
+total: countJson.PreviousWeekCount,
+completed: countJson.PreviousWeekCount,
 dailyCompleted: previousWeekDates.map((date, i) => ({
 date: date.toISOString(),
-value: 800 + i * 5
+value: Math.round(countJson.PreviousWeekCount / 7)
 }))
 };
 
-// ----- Previous Weeks (Month View) -----
+// Optional: You can still keep previousWeeks (month view) if needed
 const monthWeeks = getCurrentMonthWeeks().map((week, i) => ({
 ...week,
 total: 1800 + i * 500,
@@ -195,8 +199,6 @@ fetchData();
 const interval = setInterval(fetchData, 10000);
 return () => clearInterval(interval);
 }, []);
-
-
 
 const getPieStats = () => {
 if (!data) return { completed: 0, reworked: 0 };
