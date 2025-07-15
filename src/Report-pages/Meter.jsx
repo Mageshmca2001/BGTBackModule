@@ -4,6 +4,7 @@ import StageOneFunctionalTest from '../stagescom/FunctionaTest';
 import StageTwoCalibrationTest from '../stagescom/CalibartionTest';
 import StageThreeAccuracyTest from '../stagescom/AccuracyTest';
 import StageFourNICTest from '../stagescom/NICTest';
+import StageFiveFinaltest from '../stagescom/FinalTest';
 import { toBinary } from '../utils/binary';
 
 const API_BASE = import.meta.env.VITE_API;
@@ -18,6 +19,8 @@ const [AcParameters, setAcParameters] = useState([]);
 const [AcMatchedParameters, setAcMatchedParameters] = useState(null);
 const [NICParameters, setNICParameters] = useState([]);
 const [NICMatchedParameters, setNICMatchedParameters] = useState(null);
+const [FinalParameter, setFinalParameter] = useState(null);
+const [FinalMatchedParameters, setFinalMatchedParameters] = useState(null);
 const [serialNumber, setSerialNumber] = useState('');
 const [dateTime, setDateTime] = useState(new Date());
 const [notFoundMessage, setNotFoundMessage] = useState({ visible: false, message: '' });
@@ -25,6 +28,7 @@ const [stageOneCollapsed, setStageOneCollapsed] = useState(true);
 const [stageTwoCollapsed, setStageTwoCollapsed] = useState(true);
 const [stageThreeCollapsed, setStageThreeCollapsed] = useState(true);
 const [stageFourCollapsed, setStageFourCollapsed] = useState(true);
+const [stageFiveCollapsed, setStageFiveCollapsed] = useState(true);
 const [loading, setLoading] = useState(false);
 const [maintenanceMode, setMaintenanceMode] = useState(false);
 
@@ -42,6 +46,7 @@ let isFunctionalOk = false;
 let isCalibrationOk = false;
 let isAccuracyOk = false;
 let isNICOk = false;
+let isFinalOk = false;
 
 try {
 const res = await axios.get(`${API_BASE}/user/Functional`);
@@ -83,7 +88,18 @@ isNICOk = true;
 console.error('❌ NIC API Error:', err);
 }
 
-const allFailed = !isFunctionalOk && !isCalibrationOk && !isAccuracyOk && !isNICOk;
+try {
+const res = await axios.get(`${API_BASE}/user/NIC`);
+if (Array.isArray(res.data?.users)) {
+setFinalParameter(res.data.users);
+isFinalOk = true;
+}
+} catch (err) {
+console.error('❌Final API Error:', err);
+}
+
+
+const allFailed = !isFunctionalOk && !isCalibrationOk && !isAccuracyOk && !isNICOk && !isFinalOk;
 setMaintenanceMode(allFailed);
 }, []);
 
@@ -117,6 +133,7 @@ setFunctionalMatchedParameters(null);
 setCalibMatchedParameters(null);
 setAcMatchedParameters(null);
 setNICMatchedParameters(null);
+setFinalMatchedParameters(null);
 }
 }, [maintenanceMode]);
 
@@ -152,21 +169,27 @@ const matchedAc = AcParameters.find(
 const matchedNIC = NICParameters.find(
 (n) => n?.PCBSerialNumber?.trim().toLowerCase() === inputSN
 );
+const matchedFinal = FinalParameter.find(
+(F) => F?.PCBSerialNumber?.trim().toLowerCase() === inputSN
+);
 
-const anyMatched = matched || matchedcalib || matchedAc || matchedNIC;
+const anyMatched = matched || matchedcalib || matchedAc || matchedNIC || matchedFinal;
 
 if (anyMatched) {
 setFunctionalMatchedParameters(matched || null);
 setCalibMatchedParameters(matchedcalib || null);
 setAcMatchedParameters(matchedAc || null);
 setNICMatchedParameters(matchedNIC || null);
-setFilteredData([matched, matchedcalib, matchedAc, matchedNIC].filter(Boolean));
+setFinalMatchedParameters(matchedFinal || null);
+setFilteredData([matched, matchedcalib, matchedAc, matchedNIC,matchedFinal].filter(Boolean));
 setNotFoundMessage({ visible: false, message: '' });
 } else {
 setFunctionalMatchedParameters(null);
 setCalibMatchedParameters(null);
 setAcMatchedParameters(null);
 setNICMatchedParameters(null);
+setAcMatchedParameters(null);
+setFinalMatchedParameters(null);
 setFilteredData([]);
 setNotFoundMessage({ visible: true, message: 'Serial Number was not found in records.' });
 }
@@ -322,6 +345,15 @@ filteredData={filteredData}
 NICParameters={NICMatchedParameters}
 stageFourCollapsed={stageFourCollapsed}
 setStageFourCollapsed={setStageFourCollapsed}
+/>
+)}
+
+{FinalMatchedParameters && (
+<StageFiveFinaltest
+filteredData={filteredData}
+FinalParameters={FinalMatchedParameters}
+stageFiveCollapsed={stageFiveCollapsed}
+setStageFiveCollapsed={setStageFiveCollapsed}
 />
 )}
 </>

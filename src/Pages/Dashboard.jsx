@@ -17,6 +17,8 @@ import { motion, AnimatePresence } from 'framer-motion';
 import ChatBot from './chatbot';
 import StarCard from '../components/StarCard';
 
+
+
 ChartJS.register(
 CategoryScale,
 LinearScale,
@@ -29,6 +31,8 @@ Tooltip,
 Legend,
 ChartDataLabels
 );
+
+const API_BASE = import.meta.env.VITE_API || 'http://192.168.29.50:4000';
 
 // Animation Variants
 const containerVariants = {
@@ -126,7 +130,7 @@ return () => clearInterval(interval);
 useEffect(() => {
 const fetchData = async () => {
 try {
-const countRes = await fetch('http://localhost:5000/user/today-count');
+const countRes = await fetch(`${API_BASE}/user/today-count`);
 if (!countRes.ok) throw new Error('Failed to fetch counts');
 const countJson = await countRes.json();
 
