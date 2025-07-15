@@ -30,7 +30,7 @@ Legend,
 ChartDataLabels
 );
 
-// 🌟 Animation Variants
+// Animation Variants
 const containerVariants = {
 hidden: {},
 visible: {
@@ -62,7 +62,7 @@ const timeData = [
 const getWeekDates = (baseDate = new Date()) => {
 const week = [];
 const date = new Date(baseDate);
-const day = date.getDay(); // Sunday = 0
+const day = date.getDay();
 date.setDate(date.getDate() - day);
 for (let i = 0; i < 7; i++) {
 const d = new Date(date);
@@ -126,67 +126,57 @@ return () => clearInterval(interval);
 useEffect(() => {
 const fetchData = async () => {
 try {
-const res = await fetch('https://frontend-4iv0.onrender.com/0');
-if (!res.ok) throw new Error('Network error');
-const result = await res.json();
-
 const countRes = await fetch('http://localhost:5000/user/today-count');
+if (!countRes.ok) throw new Error('Failed to fetch counts');
 const countJson = await countRes.json();
 
-// ----- Present Day -----
-result.presentDay = {
-total: countJson.TodayCount,
-completed: countJson.TodayCount,
-shift1: Math.floor(countJson.TodayCount * 0.33),
-shift2: Math.floor(countJson.TodayCount * 0.33),
-shift3: countJson.TodayCount - (Math.floor(countJson.TodayCount * 0.33) * 2),
+const presentWeekDates = getWeekDates();
+const previousWeekDates = getWeekDates(new Date(Date.now() - 7 * 86400000));
+
+const result = {
+presentDay: {
+total: countJson.data.TodayCount,
+completed: countJson.data.TodayCompleted,
+shift1: Math.floor(countJson.data.TodayCount * 0.33),
+shift2: Math.floor(countJson.data.TodayCount * 0.33),
+shift3: countJson.data.TodayCount - (Math.floor(countJson.data.TodayCount * 0.33) * 2),
 hourlyCompleted: [400, 500, 600, 550, 700, 650, 600, 500, 400, 300, 250, 200, 150],
 hourlyReworked: [100, 80, 70, 60, 90, 85, 70, 60, 40, 30, 25, 20, 15]
-};
-
-// ----- Previous Day -----
-result.previousDay = {
-total: countJson.YesterdayCount,
-completed: countJson.YesterdayCount,
-shift1: Math.floor(countJson.YesterdayCount * 0.33),
-shift2: Math.floor(countJson.YesterdayCount * 0.33),
-shift3: countJson.YesterdayCount - (Math.floor(countJson.YesterdayCount * 0.33) * 2),
+},
+previousDay: {
+total: countJson.data.YesterdayCount,
+completed: countJson.data.YesterdayCompleted,
+shift1: Math.floor(countJson.data.YesterdayCount * 0.33),
+shift2: Math.floor(countJson.data.YesterdayCount * 0.33),
+shift3: countJson.data.YesterdayCount - (Math.floor(countJson.data.YesterdayCount * 0.33) * 2),
 hourlyCompleted: [300, 400, 350, 300, 250, 200, 180, 150, 140, 130, 120, 100, 90],
 hourlyReworked: [60, 55, 50, 40, 35, 30, 25, 20, 18, 15, 10, 8, 5]
-};
-
-// ----- Present Week -----
-const presentWeekDates = getWeekDates();
-result.presentWeek = {
-total: countJson.CurrentWeekCount,
-completed: countJson.CurrentWeekCount,
+},
+presentWeek: {
+total: countJson.data.CurrentWeekCount,
+completed: countJson.data.CurrentWeekCompleted,
 dailyCompleted: presentWeekDates.map((date, i) => ({
 date: date.toISOString(),
 value: [800, 900, 950, 880, 1020, 970, 890][i],
 reworked: [50, 40, 60, 45, 55, 50, 48][i]
 }))
-};
-
-// ----- Previous Week -----
-const previousWeekDates = getWeekDates(new Date(Date.now() - 7 * 24 * 60 * 60 * 1000));
-result.previousWeek = {
-total: countJson.PreviousWeekCount,
-completed: countJson.PreviousWeekCount,
+},
+previousWeek: {
+total: countJson.data.PreviousWeekCount,
+completed: countJson.data.PreviousWeekCompleted,
 dailyCompleted: previousWeekDates.map((date, i) => ({
 date: date.toISOString(),
 value: [700, 720, 690, 730, 710, 740, 720][i],
 reworked: [60, 58, 65, 50, 55, 62, 59][i]
 }))
-};
-
-// Optional: Month View
-const monthWeeks = getCurrentMonthWeeks().map((week, i) => ({
+},
+previousWeeks: getCurrentMonthWeeks().map((week, i) => ({
 ...week,
 total: 1800 + i * 500,
 completed: 1500 + i * 400,
 hourlyCompleted: Array(13).fill(100 + i * 10)
-}));
-result.previousWeeks = monthWeeks;
+}))
+};
 
 setData(result);
 } catch (err) {
@@ -260,7 +250,10 @@ const total = data.reduce((a, b) => a + b, 0);
 return total === 0 ? '' : `${((value / total) * 100).toFixed(1)}%`;
 },
 color: '#fff',
-font: { weight: 'bold', size: 14, family: 'Poppins' }
+font: { weight: 'bold', size: 14, family: 'Poppins' },
+anchor: 'center', // ✅ ADD THIS
+align: 'center',  // ✅ ADD THIS
+clamp: true,      // ✅ OPTIONAL: prevents overflow
 },
 tooltip: {
 enabled: true
@@ -463,7 +456,7 @@ const colors = [
 "from-purple-400 to-purple-600",
 "from-yellow-400 to-yellow-600",
 "from-indigo-400 to-indigo-600",
-"from-green-400 to-green-600",
+"from-rose-300 to-rose-600",
 "from-pink-400 to-pink-600",
 "from-blue-400 to-blue-600"
 ];
