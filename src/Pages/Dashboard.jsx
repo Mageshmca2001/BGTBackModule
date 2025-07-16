@@ -17,8 +17,6 @@ import { motion, AnimatePresence } from 'framer-motion';
 import ChatBot from './chatbot';
 import StarCard from '../components/StarCard';
 
-
-
 ChartJS.register(
 CategoryScale,
 LinearScale,
@@ -141,18 +139,18 @@ const result = {
 presentDay: {
 total: countJson.data.TodayCount,
 completed: countJson.data.TodayCompleted,
-shift1: Math.floor(countJson.data.TodayCount * 0.33),
-shift2: Math.floor(countJson.data.TodayCount * 0.33),
-shift3: countJson.data.TodayCount - (Math.floor(countJson.data.TodayCount * 0.33) * 2),
+shift1: countJson.data.TodayShift1,
+shift2: countJson.data.TodayShift2,
+shift3: countJson.data.TodayShift3,
 hourlyCompleted: [400, 500, 600, 550, 700, 650, 600, 500, 400, 300, 250, 200, 150],
 hourlyReworked: [100, 80, 70, 60, 90, 85, 70, 60, 40, 30, 25, 20, 15]
 },
 previousDay: {
 total: countJson.data.YesterdayCount,
 completed: countJson.data.YesterdayCompleted,
-shift1: Math.floor(countJson.data.YesterdayCount * 0.33),
-shift2: Math.floor(countJson.data.YesterdayCount * 0.33),
-shift3: countJson.data.YesterdayCount - (Math.floor(countJson.data.YesterdayCount * 0.33) * 2),
+shift1: countJson.data.YesterdayShift1,
+shift2: countJson.data.YesterdayShift2,
+shift3: countJson.data.YesterdayShift3,
 hourlyCompleted: [300, 400, 350, 300, 250, 200, 180, 150, 140, 130, 120, 100, 90],
 hourlyReworked: [60, 55, 50, 40, 35, 30, 25, 20, 18, 15, 10, 8, 5]
 },
