@@ -19,6 +19,12 @@ calendarWeek: <FaCalendarWeek className="text-white text-4xl drop-shadow-lg" />,
 const StarCard = ({
 total = 0,
 completed = 0,
+functional= 0,
+calibration= 0,
+accuracy= 0,
+nic= 0,
+finalInit=0,
+
 bgColor = 'from-blue-500 to-blue-700',
 icon = 'sun',
 title = 'Shift',
@@ -41,12 +47,32 @@ flex flex-col justify-between h-full`}
 {IconComponent}
 </div>
 </div>
-<div className="mt-4">
-<span className="inline-block bg-green-500 text-white text-xs md:text-sm px-3 py-1.5 md:px-4 md:py-2 rounded shadow-md hover:bg-green-600 transition">
+
+{/* Multiple Tags */}
+<div className="mt-4 space-y-2">
+<div className="w-full  text-white text-xs md:text-sm px-4 py-2 rounded shadow-md border border-white hover:bg-red-600 transition text-center">
+Functional: {functional}
+</div>
+<div className="w-full  text-white text-xs md:text-sm px-4 py-2 rounded shadow-md border border-white hover:bg-orange-600 transition text-center">
+Calibration: {calibration}
+</div>
+<div className="w-full  text-white text-xs md:text-sm px-4 py-2 rounded shadow-md border border-white hover:bg-yellow-600 transition text-center">
+Accuracy: {accuracy}
+</div>
+<div className="w-full  text-white text-xs md:text-sm px-4 py-2 rounded shadow-md border border-white hover:bg-blue-600 transition text-center">
+NIC: {nic}
+</div>
+<div className="w-full  text-white text-xs md:text-sm px-4 py-2 rounded shadow-md border border-white hover:bg-indigo-600 transition text-center">
+Final Init: {finalInit}
+</div>
+<div className="w-full bg-green-500 text-white text-xs md:text-sm px-4 py-2 rounded shadow-md border border-white hover:bg-green-600 transition text-center">
 Completed: {completed}
-</span>
 </div>
 </div>
+
+
+</div>
+
 );
 };
 

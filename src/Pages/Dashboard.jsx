@@ -132,6 +132,9 @@ const countRes = await fetch(`${API_BASE}/user/today-count`);
 if (!countRes.ok) throw new Error('Failed to fetch counts');
 const countJson = await countRes.json();
 
+// Add this after presentDay/previousDay setup
+const hourlyDetails = countJson.data.HourlyDetails || []; // adjust based on API
+
 const presentWeekDates = getWeekDates();
 const previousWeekDates = getWeekDates(new Date(Date.now() - 7 * 86400000));
 
@@ -177,8 +180,26 @@ previousWeeks: getCurrentMonthWeeks().map((week, i) => ({
 total: 1800 + i * 500,
 completed: 1500 + i * 400,
 hourlyCompleted: Array(13).fill(100 + i * 10)
-}))
+})),
+
+// ✅ ADD THIS SECTION BELOW:
+hourlyDetails: [
+{ time: '06:00', Functional: 100, Calibration: 40, Accuracy: 60, NIC: 20, FinalInit: 10 },
+{ time: '08:00', Functional: 120, Calibration: 50, Accuracy: 70, NIC: 30, FinalInit: 15 },
+{ time: '10:00', Functional: 130, Calibration: 60, Accuracy: 80, NIC: 25, FinalInit: 20 },
+{ time: '12:00', Functional: 110, Calibration: 55, Accuracy: 75, NIC: 35, FinalInit: 18 },
+{ time: '14:00', Functional: 140, Calibration: 60, Accuracy: 90, NIC: 28, FinalInit: 22 },
+{ time: '16:00', Functional: 135, Calibration: 50, Accuracy: 85, NIC: 32, FinalInit: 21 },
+{ time: '18:00', Functional: 120, Calibration: 45, Accuracy: 70, NIC: 29, FinalInit: 19 },
+{ time: '20:00', Functional: 115, Calibration: 40, Accuracy: 65, NIC: 25, FinalInit: 17 },
+{ time: '22:00', Functional: 100, Calibration: 35, Accuracy: 55, NIC: 20, FinalInit: 15 },
+{ time: '00:00', Functional: 90, Calibration: 30, Accuracy: 50, NIC: 15, FinalInit: 10 },
+{ time: '02:00', Functional: 85, Calibration: 25, Accuracy: 45, NIC: 12, FinalInit: 8 },
+{ time: '04:00', Functional: 80, Calibration: 20, Accuracy: 40, NIC: 10, FinalInit: 5 },
+{ time: '06:00', Functional: 75, Calibration: 18, Accuracy: 35, NIC: 8, FinalInit: 4 }
+]
 };
+
 
 setData(result);
 } catch (err) {
@@ -347,6 +368,29 @@ Loading<span className="animate-bounce mx-1">.</span>
 </div>
 );
 
+const hourlyLabels = data?.hourlyDetails?.map(item => item.time) || [];
+const breakdownFields = ['Functional', 'Calibration', 'Accuracy', 'NIC', 'FinalInit'];
+
+const barDataHourlyDetails = {
+labels: hourlyLabels,
+datasets: breakdownFields.map((key, i) => ({
+label: key,
+data: data?.hourlyDetails?.map(item => item[key]) || [],
+backgroundColor: [
+'#3B82F6', // Functional
+'#F59E0B', // Calibration
+'#10B981', // Accuracy
+'#EF4444', // NIC
+'#8B5CF6'  // FinalInit
+][i],
+barThickness: 16,         // ✅ Set individual bar thickness
+categoryPercentage: 0.7,  // ✅ Space between groups
+barPercentage: 0.9,       // ✅ Space between bars inside group
+borderRadius: 4,
+}))
+};
+
+
 // ⛔ Error or Loading
 if (loading) return <LoadingDots />;
 if (error) return <div className="text-center text-red-600 mt-10 font-semibold font-poppins">Error: {error}</div>;
@@ -491,75 +535,112 @@ disableHover
 
 <section className="bg-white rounded-2xl shadow-lg p-6 mt-4">
 <h2 className="text-2xl font-bold text-center text-gray-700 mb-6">Meter Analysis Dashboard</h2>
-<div className="grid grid-cols-1 md:grid-cols-5 gap-6 font-poppins">
-{/* Pie Chart */}
-<div className="md:col-span-1 p-4 rounded-xl bg-gray-50 shadow">
-<h3 className="text-lg font-semibold text-gray-700 mb-4">Status Pie</h3>
-<div className="h-[250px] relative hover:shadow-green-300 transition duration-300">
-<Pie data={pieData} options={pieChartOptions} />
-</div>
 
-</div>
-
-{/* Bar Chart */}
+<div className="grid grid-cols-1 gap-6 font-poppins">
+{/* ✅ Unified Hourly/Weekly Chart */}
 <div className="md:col-span-4 p-4 rounded-xl bg-gray-50 shadow">
-<h3 className="text-lg font-semibold text-gray-700 mb-4">
-{['Present Day', 'Previous Day','Present week','Previous week'].includes(selectedRange) ? 'Hourly Progress' : 'Weekly Progress'}
+<h3 className="text-lg font-semibold text-gray-700 mb-4 text-center">
+{['Present Week', 'Previous Week'].includes(selectedRange)
+? 'Weekly Progress & Breakdown: '
+: 'Hourly Progress & Breakdown: '}
+<span className="inline-block text-primary">
+[Completed, Functional, Calibration, Accuracy, NIC, FinalInit]
+</span>
 </h3>
-<div className="h-[250px]">
-<Bar data={{
-labels: barData.labels,
-datasets: [
+
+<div className="h-[300px] w-full">
+<Bar
+data={{
+labels: ['Present Week', 'Previous Week'].includes(selectedRange)
+? data?.[selectedRange === 'Present Week' ? 'presentWeek' : 'previousWeek']
+?.dailyCompleted?.map(d =>
+new Date(d.date).toLocaleDateString('en-GB', { weekday: 'long' })
+) || []
+: hourlyLabels,
+datasets: (() => {
+const colors = ['#3B82F6', '#F59E0B', '#10B981', '#EF4444', '#8B5CF6'];
+
+const completedData = ['Present Week', 'Previous Week'].includes(selectedRange)
+? data?.[selectedRange === 'Present Week' ? 'presentWeek' : 'previousWeek']
+?.dailyCompleted?.map(d => d.value) || []
+: data?.presentDay?.hourlyCompleted || [];
+
+const breakdownData = ['Present Week', 'Previous Week'].includes(selectedRange)
+? (() => {
+const weekData = data?.[selectedRange === 'Present Week' ? 'presentWeek' : 'previousWeek']
+?.dailyCompleted || [];
+const summary = weekData.reduce(
+(acc, day) => {
+acc.Functional.push(day.value * 0.4);
+acc.Calibration.push(day.value * 0.2);
+acc.Accuracy.push(day.value * 0.2);
+acc.NIC.push(day.value * 0.1);
+acc.FinalInit.push(day.value * 0.1);
+return acc;
+},
+{
+Functional: [],
+Calibration: [],
+Accuracy: [],
+NIC: [],
+FinalInit: [],
+}
+);
+return summary;
+})()
+: breakdownFields.reduce((acc, key) => {
+acc[key] = data?.hourlyDetails?.map(item => item[key]) || [];
+return acc;
+}, {});
+
+return [
 {
 label: 'Completed',
-data: barData.datasets[0].data,
+data: completedData,
 backgroundColor: 'rgba(34, 197, 94, 0.7)',
 borderColor: 'rgba(22, 163, 74, 1)',
 borderWidth: 1,
-borderRadius: 6,
-type: 'bar'
+barThickness: 16,
+categoryPercentage: 0.6,
+barPercentage: 0.9,
+borderRadius: 0 // ✅ No rounded corners
+},
+...breakdownFields.map((key, i) => ({
+label: key,
+data: breakdownData[key] || [],
+backgroundColor: colors[i],
+barThickness: 16,
+categoryPercentage: 0.7,
+barPercentage: 0.9,
+borderRadius: 0 // ✅ No rounded corners
+})),
+{
+label: 'Tracking Line',
+data: completedData,
+borderColor: 'rgba(59, 130, 246, 1)',
+backgroundColor: 'transparent',
+borderWidth: 2,
+pointRadius: 3,
+tension: 0.3,
+type: 'line'
 },
 {
 label: 'Threshold',
-data: Array(barData.datasets[0].data.length).fill(redLineValue),
+data: Array(completedData.length).fill(redLineValue),
 borderColor: 'rgba(239, 68, 68, 1)',
 borderWidth: 2,
 borderDash: [5, 5],
 pointRadius: 0,
 fill: false,
 type: 'line'
-},
-{
-label: 'Tracking Line',
-data: barData.datasets[0].data,
-borderColor: 'rgba(59, 130, 246, 1)', // Blue
-backgroundColor: 'transparent',
-borderWidth: 2,
-pointRadius: 3,
-tension: 0.3,
-type: 'line'
 }
-]
-}} options={{
+];
+})()
+}}
+options={{
 responsive: true,
 maintainAspectRatio: false,
 plugins: {
-datalabels: { display: false },
-tooltip: {
-enabled: true,
-mode: 'index',
-intersect: false,
-callbacks: {
-label: function (context) {
-const label = context.dataset.label || '';
-const value = context.parsed.y;
-if (label === 'Threshold') return `🔴 ${label}: ${value}`;
-if (label === 'Completed') return `🟢 ${label}: ${value}`;
-if (label === 'Tracking Line') return `🔵 ${label}: ${value}`;
-return `${label}: ${value}`;
-}
-}
-},
 legend: {
 position: 'top',
 labels: {
@@ -568,6 +649,24 @@ family: 'Poppins',
 size: 13
 }
 }
+},
+tooltip: {
+enabled: true,
+mode: 'index',
+intersect: false,
+callbacks: {
+label: function (context) {
+const label = context.dataset.label || '';
+const value = context.parsed.y;
+if (label === 'Tracking Line') return '';
+if (label === 'Threshold') return `🔴 ${label}: ${value}`;
+if (label === 'Completed') return `🟢 ${label}: ${value}`;
+return `${label}: ${value}`;
+}
+}
+},
+datalabels: {
+display: false
 }
 },
 interaction: {
@@ -575,18 +674,31 @@ mode: 'index',
 intersect: false
 },
 scales: {
+x: {
+ticks: {
+font: {
+family: 'Poppins'
+}
+}
+},
 y: {
 beginAtZero: true,
 suggestedMax: redLineValue + 500,
-ticks: { stepSize: 200 }
+ticks: {
+stepSize: 200,
+font: {
+family: 'Poppins'
 }
 }
-}} />
+}
+}
+}}
+/>
 </div>
+
 </div>
 </div>
 </section>
-
 
 <ChatBot />
 </main>
