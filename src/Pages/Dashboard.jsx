@@ -114,6 +114,7 @@ const [currentDate, setCurrentDate] = useState(new Date());
 const [redLineValue, setRedLineValue] = useState(1000);
 const [lastUpdated, setLastUpdated] = useState(null);
 const [refreshKey, setRefreshKey] = useState(0);
+const [selectedShift, setSelectedShift] = useState('All');
 
 
 const formattedDate = currentDate.toLocaleDateString('en-GB');
@@ -193,6 +194,12 @@ passed: 780,
 failed: 140,
 reworked: 80,
 },
+dailyReport: {
+passed: 820,
+failed: 100,
+reworked: 60,
+},
+
 
 hourlyDetails: [
 { time: '06:00', Functional: 100, Calibration: 40, Accuracy: 60, NIC: 20, FinalTest: 10 },
@@ -444,12 +451,16 @@ const breakdownFields = ['Functional', 'Calibration', 'Accuracy', 'NIC', 'FinalT
 
 
 const firstFieldPieData = useMemo(() => ({
-labels: ['Passed', 'Failed', 'Reworked Init'],
+labels: ['passed', 'failed', 'reworked'],
 datasets: [{
 data: data?.firstFieldReport
-? [data.firstFieldReport.passed, data.firstFieldReport.failed, data.firstFieldReport.reworked]
+? [
+data.firstFieldReport.passed,
+data.firstFieldReport.failed,
+
+]
 : [0, 0, 0],
-backgroundColor: ['rgba(0, 194, 71, 0.7)', '#EF4444', '#ffae00ff'],
+backgroundColor: ['rgba(11, 190, 77, 0.7)', '#EF4444'], // green, red, orange
 borderColor: '#fff',
 borderWidth: 2,
 hoverOffset: 10,
@@ -458,29 +469,31 @@ hoverOffset: 10,
 
 const firstFieldPieOptions = {
 responsive: true,
-maintainAspectRatio: false,
-cutout: '60%',
+maintainAspectRatio: true,
 plugins: {
 datalabels: {
-display: (ctx) => {
-const total = ctx.dataset.data.reduce((a, b) => a + b, 0);
-const value = ctx.dataset.data[ctx.dataIndex];
-return total > 0 && (value / total) * 100 >= 5;
-},
-formatter: (value, context) => {
-const total = context.dataset.data.reduce((a, b) => a + b, 0);
-return total ? `${((value / total) * 100).toFixed(1)}%` : '';
-},
-color: '#fff',
-font: { weight: 'bold', size: 14, family: 'Poppins' },
-anchor: 'center',
-align: 'center',
+  display: (ctx) => {
+    const total = ctx.dataset.data.reduce((a, b) => a + b, 0);
+    const value = ctx.dataset.data[ctx.dataIndex];
+    return total > 0 && (value / total) * 100 >= 5; // Only show if slice ≥ 5%
+  },
+  formatter: (value, context) => {
+    const total = context.dataset.data.reduce((a, b) => a + b, 0);
+    const percent = total ? (value / total) * 100 : 0;
+    return `${percent.toFixed(0)}%`;
+  },
+  color: '#fff',
+  font: { weight: 'bold', size: 14, family: 'Poppins' },
+  anchor: 'center',
+  align: 'center',
 },
 legend: {
 position: 'bottom',
 labels: {
 font: { family: 'Poppins', size: 13 },
 color: '#4B5563',
+usePointStyle: true,
+pointStyle: 'rectRounded',
 },
 },
 tooltip: {
@@ -492,26 +505,68 @@ return `${label}: ${value}`;
 }
 }
 },
-// Display center text like "78% Passed"
-beforeDraw: (chart) => {
-const { width, height, ctx } = chart;
-ctx.restore();
-const fontSize = (height / 120).toFixed(2);
-ctx.font = `${fontSize}em Poppins`;
-ctx.textBaseline = 'middle';
-const total = chart.data.datasets[0].data.reduce((a, b) => a + b, 0);
-const passed = chart.data.datasets[0].data[0];
-const percent = total ? ((passed / total) * 100).toFixed(0) : 0;
-const text = `${percent}% Passed`;
-const textX = (width - ctx.measureText(text).width) / 2;
-const textY = height / 2;
-ctx.fillStyle = '#1F2937';
-ctx.fillText(text, textX, textY);
-ctx.save();
-}
 }
 };
 
+
+const dailyReportPieData = useMemo(() => ({
+labels: ['passed', 'failed', 'reworked'],
+datasets: [{
+data: data?.dailyReport
+? [
+data.dailyReport.passed,
+data.dailyReport.failed,
+data.dailyReport.reworked
+]
+: [0, 0, 0],
+backgroundColor: ['rgba(11, 190, 77, 0.7)', '#EF4444', '#317ff5ff'],
+borderColor: '#fff',
+borderWidth: 2,
+hoverOffset: 10,
+}]
+}), [data]);
+
+
+const dailyReportPieOptions = {
+responsive: true,
+maintainAspectRatio: true,
+plugins: {
+datalabels: {
+  display: (ctx) => {
+    const total = ctx.dataset.data.reduce((a, b) => a + b, 0);
+    const value = ctx.dataset.data[ctx.dataIndex];
+    return total > 0 && (value / total) * 100 >= 5; // Only show if slice ≥ 5%
+  },
+  formatter: (value, context) => {
+    const total = context.dataset.data.reduce((a, b) => a + b, 0);
+    const percent = total ? (value / total) * 100 : 0;
+    return `${percent.toFixed(0)}%`;
+  },
+  color: '#fff',
+  font: { weight: 'bold', size: 14, family: 'Poppins' },
+  anchor: 'center',
+  align: 'center',
+},
+legend: {
+position: 'bottom',
+labels: {
+font: { family: 'Poppins', size: 13 },
+color: '#4B5563',
+usePointStyle: true,
+pointStyle: 'rectRounded',
+},
+},
+tooltip: {
+callbacks: {
+label: function (ctx) {
+const label = ctx.label;
+const value = ctx.formattedValue;
+return `${label}: ${value}`;
+}
+}
+},
+}
+};
 
 
 // ⛔ Error or Loading
@@ -847,20 +902,35 @@ font: { family: 'Poppins' },
 
 
 <section className="bg-white rounded-2xl shadow-lg p-6 mt-6 font-poppins">
-<h2 className="text-2xl font-bold text-center text-gray-700 mb-4">First yield Report</h2>
+<h2 className="text-2xl font-bold text-center text-gray-700 mb-8">Yield & Daily Reports</h2>
 
 <motion.div
-key={`firstFieldPie-${refreshKey}`}
-initial={{ opacity: 0, scale: 0.95 }}
-animate={{ opacity: 1, scale: 1 }}
-transition={{ duration: 0.4 }}
-className="flex justify-center items-center h-[360px]"
+key={`dualPie-${refreshKey}`}
+initial={{ opacity: 0, y: 20 }}
+animate={{ opacity: 1, y: 0 }}
+transition={{ duration: 0.5 }}
+className="grid grid-cols-1 md:grid-cols-2 gap-6"
 >
-<div className="relative w-[320px] h-[320px]">
+{/* First Yield Report Box */}
+<div className="bg-gray-50 rounded-xl shadow p-6 flex flex-col items-center">
+<h3 className="text-lg font-semibold text-gray-700 mb-4">First Yield Report</h3>
+<div className="relative w-[280px] h-[280px]">
 <Pie data={firstFieldPieData} options={firstFieldPieOptions} plugins={[ChartDataLabels]} />
+</div>
+</div>
+
+
+{/* Daily Report Box */}
+<div className="bg-gray-50 rounded-xl shadow p-6 flex flex-col items-center">
+<h3 className="text-lg font-semibold text-gray-700 mb-4">Daily Report</h3>
+<div className="relative w-[280px] h-[280px]">
+<Pie data={dailyReportPieData} options={dailyReportPieOptions} plugins={[ChartDataLabels]} />
+</div>
 </div>
 </motion.div>
 </section>
+
+
 
 <ChatBot />
 </main>
