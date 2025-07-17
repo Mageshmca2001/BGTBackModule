@@ -47,6 +47,7 @@ backgroundImage: {
         base: '14.3px', // Default font size
         base1:'16px', // Default font size
         base2:'23px', // Default font size
+        base4:'20px'
       },
 
       fontFamily: {

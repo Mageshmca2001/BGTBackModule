@@ -41,7 +41,7 @@ flex flex-col justify-between h-full`}
 <div className="flex justify-between items-center mb-3 md:mb-4">
 <div>
 <p className="text-3xl md:text-4xl font-bold drop-shadow-sm">{total}</p>
-<p className="text-base md:text-lg font-semibold opacity-90">{title}</p>
+<p className="text-base md:text-base4 font-semibold opacity-90">{title}</p>
 </div>
 <div className="bg-white/20 p-3 md:p-4 rounded-full shadow-inner backdrop-blur-sm">
 {IconComponent}
@@ -50,27 +50,22 @@ flex flex-col justify-between h-full`}
 
 {/* Multiple Tags */}
 <div className="mt-4 space-y-2">
-<div className="w-full  text-white text-xs md:text-sm px-4 py-2 rounded shadow-md border border-white hover:bg-red-600 transition text-center">
+<div className="w-full  text-white  text-xs md:text-sm px-4 py-2 rounded shadow-md border border-white hover:bg-gray-600 hover:text-white transition text-left">
 Functional: {functional}
 </div>
-<div className="w-full  text-white text-xs md:text-sm px-4 py-2 rounded shadow-md border border-white hover:bg-orange-600 transition text-center">
-Calibration: {calibration}
+<div className="w-full   text-white  text-xs md:text-sm px-4 py-2 rounded shadow-md border border-white hover:bg-gray-600 hover:text-white transition text-left">
+Calibration & Accuracy: {calibration},{accuracy}
 </div>
-<div className="w-full  text-white text-xs md:text-sm px-4 py-2 rounded shadow-md border border-white hover:bg-yellow-600 transition text-center">
-Accuracy: {accuracy}
-</div>
-<div className="w-full  text-white text-xs md:text-sm px-4 py-2 rounded shadow-md border border-white hover:bg-blue-600 transition text-center">
+<div className="w-full  text-white text-xs md:text-sm px-4 py-2 rounded shadow-md border border-white hover:bg-gray-600 hover:text-white transition text-left">
 NIC: {nic}
 </div>
-<div className="w-full  text-white text-xs md:text-sm px-4 py-2 rounded shadow-md border border-white hover:bg-indigo-600 transition text-center">
-Final Init: {finalInit}
+<div className="w-full  text-white text-xs md:text-sm px-4 py-2 rounded shadow-md border border-white hover:bg-gray-600 hover:text-white transition text-left">
+FinalTest: {finalInit}
 </div>
-<div className="w-full bg-green-500 text-white text-xs md:text-sm px-4 py-2 rounded shadow-md border border-white hover:bg-green-600 transition text-center">
+<div className="w-full bg-green-500 text-white text-xs md:text-sm px-4 py-2 rounded shadow-md border border-white hover:bg-green-600 transition text-left">
 Completed: {completed}
 </div>
 </div>
-
-
 </div>
 
 );
