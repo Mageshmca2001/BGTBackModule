@@ -231,7 +231,6 @@ hourlyDetails: [
 };
 
 
-
 setData(result);
 setRefreshKey(prev => prev + 1);
 } catch (err) {
@@ -265,6 +264,22 @@ clearTimeout(timeoutId);
 cleanupFns.current.forEach(fn => fn());
 };
 }, []);
+
+const filteredHourlyDetails = useMemo(() => {
+if (!data?.hourlyDetails) return [];
+
+if (selectedRange !== 'Day' || selectedShift === 'All') return data.hourlyDetails;
+
+if (selectedShift === 'Shift1') {
+return data.hourlyDetails.slice(0, 8); // 06:00 to 13:00
+} else if (selectedShift === 'Shift2') {
+return data.hourlyDetails.slice(8, 16); // 14:00 to 21:00
+} else if (selectedShift === 'Shift3') {
+return [...data.hourlyDetails.slice(16), ...data.hourlyDetails.slice(0, 2)]; // 22:00 to 05:00
+}
+return data.hourlyDetails;
+}, [data, selectedRange, selectedShift]);
+
 
 // const getPieStats = () => {
 // if (!data) return { completed: 0, reworked: 0 };
@@ -449,9 +464,146 @@ const breakdownFields = ['Functional', 'Calibration', 'Accuracy', 'NIC', 'FinalT
 // }))
 // };
 
+const shiftTimes = {
+Shift1: { start: '06:00', end: '14:00' },
+Shift2: { start: '14:00', end: '22:00' },
+Shift3: { start: '22:00', end: '06:00' },
+};
+
+const isTimeInShift = (time, shift) => {
+if (shift === 'All') return true;
+const { start, end } = shiftTimes[shift];
+if (start < end) return time >= start && time < end;
+return time >= start || time < end;
+};
+
+const labels = ['Present Week', 'Previous Week'].includes(selectedRange)
+? (
+data?.[
+selectedRange === 'Present Week' ? 'presentWeek' : 'previousWeek'
+]?.dailyCompleted?.map((d) =>
+new Date(d.date).toLocaleDateString('en-GB', { weekday: 'long' })
+) || []
+)
+: (() => {
+// Step 1: Filter hourly data by shift
+const shiftFiltered = filteredHourlyDetails.filter((item) =>
+isTimeInShift(item.time, selectedShift)
+);
+
+// Step 2: Get correct number of hours
+const hours = selectedShift === 'All'
+? shiftFiltered.slice(0, 25) // ✅ Need 25 time points for 24 intervals
+: shiftFiltered;
+
+// Step 3: Build time labels
+return hours.map((item, i) => {
+const current = item.time;
+const next = hours[i + 1]?.time;
+
+// For final item in Shift1/2/3, hardcode end time
+if (!next) {
+if (selectedShift === 'Shift1') return `${current} - 14:00`;
+if (selectedShift === 'Shift2') return `${current} - 22:00`;
+if (selectedShift === 'Shift3') return `${current} - 06:00`;
+return null; // For "All", no label for last lone point
+}
+
+return `${current} - ${next}`;
+}).filter(Boolean); // remove null
+})();
+
+
+
+const completedData = ['Present Week', 'Previous Week'].includes(selectedRange)
+? data?.[selectedRange === 'Present Week' ? 'presentWeek' : 'previousWeek']?.dailyCompleted?.map((d) => d.value) || []
+: filteredHourlyDetails
+.filter((item) => isTimeInShift(item.time, selectedShift))
+.map((item) =>
+Object.values(item)
+.filter((v) => typeof v === 'number' && !isNaN(v))
+.reduce((a, b) => a + b, 0)
+);
+
+const breakdownData = ['Present Week', 'Previous Week'].includes(selectedRange)
+? (() => {
+const weekData =
+data?.[selectedRange === 'Present Week' ? 'presentWeek' : 'previousWeek']?.dailyCompleted || [];
+const summary = weekData.reduce(
+(acc, day) => {
+acc.Functional.push(day.value * 0.4);
+acc.Calibration.push(day.value * 0.2);
+acc.Accuracy.push(day.value * 0.2);
+acc.NIC.push(day.value * 0.1);
+acc.FinalTest.push(day.value * 0.1);
+return acc;
+},
+{
+Functional: [],
+Calibration: [],
+Accuracy: [],
+NIC: [],
+FinalTest: [],
+}
+);
+return summary;
+})()
+: breakdownFields.reduce((acc, key) => {
+acc[key] = filteredHourlyDetails
+.filter((item) => isTimeInShift(item.time, selectedShift))
+.map((item) => item[key]);
+return acc;
+}, {});
+
+const colors = ['#3B82F6', '#F59E0B', '#10B981', '#EF4444', '#8B5CF6'];
+
+const datasets = [
+{
+label: 'Completed',
+data: completedData,
+backgroundColor: 'rgba(34, 197, 94, 0.7)',
+borderColor: 'rgba(22, 163, 74, 1)',
+borderWidth: 1,
+barThickness: 18,
+categoryPercentage: 0.6,  // <--- more space between groups
+barPercentage: 0.9,
+borderRadius: 0,
+},
+...breakdownFields.map((key, i) => ({
+label: key,
+data: breakdownData[key] || [],
+backgroundColor: colors[i],
+barThickness: 18,
+categoryPercentage: 0.6,  // <--- same here
+barPercentage: 0.9,
+borderRadius: 0,
+})),
+{
+label: 'Tracking Line',
+data: completedData,
+borderColor: 'rgba(59, 130, 246, 1)',
+backgroundColor: 'transparent',
+borderWidth: 2,
+pointRadius: 3,
+tension: 0.3,
+type: 'line',
+},
+{
+label: 'Threshold',
+data: Array(completedData.length).fill(redLineValue),
+borderColor: 'rgba(239, 68, 68, 1)',
+borderWidth: 2,
+borderDash: [5, 5],
+pointRadius: 0,
+fill: false,
+type: 'line',
+},
+];
+
+
 
 const firstFieldPieData = useMemo(() => ({
-labels: ['passed', 'failed', 'reworked'],
+labels: ['passed', 'failed'],
 datasets: [{
 data: data?.firstFieldReport
 ? [
@@ -472,20 +624,20 @@ responsive: true,
 maintainAspectRatio: true,
 plugins: {
 datalabels: {
-  display: (ctx) => {
-    const total = ctx.dataset.data.reduce((a, b) => a + b, 0);
-    const value = ctx.dataset.data[ctx.dataIndex];
-    return total > 0 && (value / total) * 100 >= 5; // Only show if slice ≥ 5%
-  },
-  formatter: (value, context) => {
-    const total = context.dataset.data.reduce((a, b) => a + b, 0);
-    const percent = total ? (value / total) * 100 : 0;
-    return `${percent.toFixed(0)}%`;
-  },
-  color: '#fff',
-  font: { weight: 'bold', size: 14, family: 'Poppins' },
-  anchor: 'center',
-  align: 'center',
+display: (ctx) => {
+const total = ctx.dataset.data.reduce((a, b) => a + b, 0);
+const value = ctx.dataset.data[ctx.dataIndex];
+return total > 0 && (value / total) * 100 >= 5; // Only show if slice ≥ 5%
+},
+formatter: (value, context) => {
+const total = context.dataset.data.reduce((a, b) => a + b, 0);
+const percent = total ? (value / total) * 100 : 0;
+return `${percent.toFixed(0)}%`;
+},
+color: '#fff',
+font: { weight: 'bold', size: 14, family: 'Poppins' },
+anchor: 'center',
+align: 'center',
 },
 legend: {
 position: 'bottom',
@@ -532,20 +684,20 @@ responsive: true,
 maintainAspectRatio: true,
 plugins: {
 datalabels: {
-  display: (ctx) => {
-    const total = ctx.dataset.data.reduce((a, b) => a + b, 0);
-    const value = ctx.dataset.data[ctx.dataIndex];
-    return total > 0 && (value / total) * 100 >= 5; // Only show if slice ≥ 5%
-  },
-  formatter: (value, context) => {
-    const total = context.dataset.data.reduce((a, b) => a + b, 0);
-    const percent = total ? (value / total) * 100 : 0;
-    return `${percent.toFixed(0)}%`;
-  },
-  color: '#fff',
-  font: { weight: 'bold', size: 14, family: 'Poppins' },
-  anchor: 'center',
-  align: 'center',
+display: (ctx) => {
+const total = ctx.dataset.data.reduce((a, b) => a + b, 0);
+const value = ctx.dataset.data[ctx.dataIndex];
+return total > 0 && (value / total) * 100 >= 5; // Only show if slice ≥ 5%
+},
+formatter: (value, context) => {
+const total = context.dataset.data.reduce((a, b) => a + b, 0);
+const percent = total ? (value / total) * 100 : 0;
+return `${percent.toFixed(0)}%`;
+},
+color: '#fff',
+font: { weight: 'bold', size: 14, family: 'Poppins' },
+anchor: 'center',
+align: 'center',
 },
 legend: {
 position: 'bottom',
@@ -715,11 +867,9 @@ disableHover
 
 <section className="bg-white rounded-2xl shadow-lg p-6 mt-4 font-poppins">
 <h2 className="text-2xl font-bold text-center text-gray-700 mb-6">Meter Analysis Dashboard</h2>
-
 <div className="grid grid-cols-1 gap-6 font-poppins">
-{/* ✅ Unified Hourly/Weekly Chart */}
-<div className="md:col-span-4 p-4 rounded-xl bg-gray-50 shadow">
-<h3 className="text-lg font-semibold text-gray-700 mb-4 text-center">
+<div className="relative flex justify-center items-center mb-4">
+<h3 className="text-lg font-semibold text-gray-700 text-center">
 {['Present Week', 'Previous Week'].includes(selectedRange)
 ? 'Weekly Progress & Breakdown: '
 : 'Hourly Progress & Breakdown: '}
@@ -727,7 +877,21 @@ disableHover
 [Completed, Functional, Calibration, Accuracy, NIC, FinalTest]
 </span>
 </h3>
-
+{selectedRange === 'Day' && (
+<div className="absolute right-0">
+<select
+value={selectedShift}
+onChange={(e) => setSelectedShift(e.target.value)}
+className="border border-gray-300 rounded px-3 py-1 text-sm bg-white shadow"
+>
+<option value="All">All Shifts</option>
+<option value="Shift1">06:00 - 14:00</option>
+<option value="Shift2">14:00 - 22:00</option>
+<option value="Shift3">22:00 - 06:00</option>
+</select>
+</div>
+)}
+</div>
 <motion.div
 key={`${selectedRange}-chart-${refreshKey}`}
 initial={{ opacity: 0 }}
@@ -735,99 +899,17 @@ animate={{ opacity: 1 }}
 transition={{ duration: 0.4 }}
 >
 <div className="w-full overflow-x-auto py-6">
-<div className={`h-[300px] ${['Present Week', 'Previous Week'].includes(selectedRange) ? 'w-full' : 'min-w-[2400px]'}`}>
+<div
+className={`h-[300px] ${
+['Present Week', 'Previous Week'].includes(selectedRange)
+? 'w-full'
+: filteredHourlyDetails.length >= 24
+? 'min-w-[2400px]'
+: 'w-full'
+}`}
+>
 <Bar
-data={{
-labels: ['Present Week', 'Previous Week'].includes(selectedRange)
-? data?.[selectedRange === 'Present Week' ? 'presentWeek' : 'previousWeek']
-?.dailyCompleted?.map(d =>
-new Date(d.date).toLocaleDateString('en-GB', { weekday: 'long' })
-) || []
-: data?.hourlyDetails?.map((item, i, arr) => {
-const current = item.time;
-const next = arr[(i + 1) % arr.length]?.time;
-return `${current} - ${next}`;
-}).slice(0, -1) || [],
-datasets: (() => {
-const colors = ['#3B82F6', '#F59E0B', '#10B981', '#EF4444', '#8B5CF6'];
-const completedData = ['Present Week', 'Previous Week'].includes(selectedRange)
-? data?.[selectedRange === 'Present Week' ? 'presentWeek' : 'previousWeek']
-?.dailyCompleted?.map(d => d.value) || []
-: data?.presentDay?.hourlyCompleted || [];
-
-const breakdownData = ['Present Week', 'Previous Week'].includes(selectedRange)
-? (() => {
-const weekData =
-data?.[selectedRange === 'Present Week' ? 'presentWeek' : 'previousWeek']
-?.dailyCompleted || [];
-const summary = weekData.reduce(
-(acc, day) => {
-acc.Functional.push(day.value * 0.4);
-acc.Calibration.push(day.value * 0.2);
-acc.Accuracy.push(day.value * 0.2);
-acc.NIC.push(day.value * 0.1);
-acc.FinalTest.push(day.value * 0.1);
-return acc;
-},
-{
-Functional: [],
-Calibration: [],
-Accuracy: [],
-NIC: [],
-FinalTest: [],
-}
-);
-return summary;
-})()
-: breakdownFields.reduce((acc, key) => {
-acc[key] = data?.hourlyDetails?.map(item => item[key]) || [];
-return acc;
-}, {});
-
-return [
-{
-label: 'Completed',
-data: completedData,
-backgroundColor: 'rgba(34, 197, 94, 0.7)',
-borderColor: 'rgba(22, 163, 74, 1)',
-borderWidth: 1,
-barThickness: 18,
-categoryPercentage: 0.7,
-barPercentage: 0.9,
-borderRadius: 0,
-},
-...breakdownFields.map((key, i) => ({
-label: key,
-data: breakdownData[key] || [],
-backgroundColor: colors[i],
-barThickness: 18,
-categoryPercentage: 0.7,
-barPercentage: 0.9,
-borderRadius: 0,
-})),
-{
-label: 'Tracking Line',
-data: completedData,
-borderColor: 'rgba(59, 130, 246, 1)',
-backgroundColor: 'transparent',
-borderWidth: 2,
-pointRadius: 3,
-tension: 0.3,
-type: 'line',
-},
-{
-label: 'Threshold',
-data: Array(completedData.length).fill(redLineValue),
-borderColor: 'rgba(239, 68, 68, 1)',
-borderWidth: 2,
-borderDash: [5, 5],
-pointRadius: 0,
-fill: false,
-type: 'line',
-},
-];
-})(),
-}}
+data={{ labels, datasets }}
 options={{
 responsive: true,
 maintainAspectRatio: false,
@@ -854,9 +936,6 @@ return `${label}: ${value}`;
 },
 titleFont: { family: 'Poppins', size: 14, weight: 'bold' },
 bodyFont: { family: 'Poppins', size: 13 },
-footerFont: { family: 'Poppins', size: 12 },
-titleAlign: 'center',
-bodyAlign: 'left',
 backgroundColor: 'rgba(255, 255, 255, 0.95)',
 titleColor: '#111827',
 bodyColor: '#1F2937',
@@ -867,9 +946,10 @@ cornerRadius: 8,
 boxPadding: 4,
 },
 datalabels: {
-display: false,
+display: false, // ✅ hides all bar numbers
 },
 },
+
 interaction: {
 mode: 'index',
 intersect: false,
@@ -891,14 +971,14 @@ font: { family: 'Poppins' },
 },
 }}
 />
+
 </div>
 </div>
 </motion.div>
-
-
-</div>
 </div>
 </section>
+
+
 
 
 <section className="bg-white rounded-2xl shadow-lg p-6 mt-6 font-poppins">
