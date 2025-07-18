@@ -41,7 +41,7 @@ flex flex-col justify-between h-full`}
 <div className="flex justify-between items-center mb-3 md:mb-4">
 <div>
 <p className="text-3xl md:text-4xl font-bold drop-shadow-sm">{total}</p>
-<p className="text-base md:text-base4 font-semibold opacity-90">{title}</p>
+<p className="text-base md:text-xl font-semibold opacity-90">{title}</p>
 </div>
 <div className="bg-white/20 p-3 md:p-4 rounded-full shadow-inner backdrop-blur-sm">
 {IconComponent}

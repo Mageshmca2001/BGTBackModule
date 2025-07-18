@@ -137,7 +137,7 @@ useEffect(() => {
 const fetchData = async () => {
 try {
 setLastUpdated(new Date());
-const countRes = await fetch(`${API_BASE}/user/today-count`);
+const countRes = await fetch(`${API_BASE}/user/count`);
 if (!countRes.ok) throw new Error('Failed to fetch counts');
 const countJson = await countRes.json();
 
@@ -285,182 +285,11 @@ return data.hourlyDetails;
 }, [data, selectedRange, selectedShift]);
 
 
-// const getPieStats = () => {
-// if (!data) return { completed: 0, reworked: 0 };
-
-// if (selectedRange === 'Present Day' || selectedRange === 'Previous Day') {
-// const selected = selectedRange === 'Present Day' ? data.presentDay : data.previousDay;
-// const completed = selected.hourlyCompleted?.reduce((a, b) => a + b, 0);
-// const reworked = selected.hourlyReworked?.reduce((a, b) => a + b, 0);
-// return { completed, reworked };
-// }
-
-// if (selectedRange === 'Present Week') {
-// const completed = data.presentWeek?.dailyCompleted?.reduce((sum, d) => sum + (d.value || 0), 0);
-// const reworked = data.presentWeek?.dailyCompleted?.reduce((sum, d) => sum + (d.reworked || 0), 0);
-// return { completed, reworked };
-// }
-
-// if (selectedRange === 'Previous Week') {
-// const completed = data.previousWeek?.dailyCompleted?.reduce((sum, d) => sum + (d.value || 0), 0);
-// const reworked = data.previousWeek?.dailyCompleted?.reduce((sum, d) => sum + (d.reworked || 0), 0);
-// return { completed, reworked };
-// }
-
-// return { completed: 0, reworked: 0 };
-// };
-
-
-// const { completed, reworked } = getPieStats();
-
-// const pieData = useMemo(() => ({
-// labels: ['Completed', 'Reworked'],
-// datasets: [
-// {
-// data: [completed, reworked],
-// backgroundColor: ['rgba(34, 197, 94, 0.85)', 'rgba(239, 68, 68, 0.85)'],
-// borderColor: '#fff',
-// borderWidth: 2,
-// hoverOffset: 10
-// }
-// ]
-// }), [completed, reworked]);
-
-// const pieChartOptions = {
-// responsive: true,
-// maintainAspectRatio: false,
-// cutout: '60%',
-// plugins: {
-// datalabels: {
-// display: (ctx) => {
-// const value = ctx.dataset.data[ctx.dataIndex];
-// const total = ctx.dataset.data.reduce((a, b) => a + b, 0);
-// return total > 0 && (value / total) * 100 >= 1;
-// },
-// formatter: (value, context) => {
-// const data = context.dataset.data;
-// const total = data.reduce((a, b) => a + b, 0);
-// return total === 0 ? '' : `${((value / total) * 100).toFixed(1)}%`;
-// },
-// color: '#fff',
-// font: { weight: 'bold', size: 14, family: 'Poppins' },
-// anchor: 'center', // ✅ ADD THIS
-// align: 'center',  // ✅ ADD THIS
-// clamp: true,      // ✅ OPTIONAL: prevents overflow
-// },
-// tooltip: {
-// enabled: true
-// },
-// legend: {
-// position: 'bottom',
-// labels: { font: { family: 'Poppins', size: 13 }, color: '#4B5563' }
-// },
-// beforeDraw: (chart) => {
-// const { width, height, ctx } = chart;
-// ctx.restore();
-// const fontSize = (height / 130).toFixed(2);
-// ctx.font = `${fontSize}em Poppins`;
-// ctx.textBaseline = 'middle';
-// const percent = completed + reworked > 0 ? ((completed / (completed + reworked)) * 100).toFixed(0) : 0;
-// const text = `${percent}% Done`;
-// const textX = Math.round((width - ctx.measureText(text).width) / 2);
-// const textY = height / 2;
-// ctx.fillStyle = '#1F2937';
-// ctx.fillText(text, textX, textY);
-// ctx.save();
-// }
-// }
-// };
-
-// const barData = useMemo(() => {
-// let labels = timeData;
-// let dataPoints = [];
-
-// if (selectedRange === 'Present Day') {
-// dataPoints = data?.presentDay?.hourlyCompleted || [];
-// } else if (selectedRange === 'Previous Day') {
-// dataPoints = data?.previousDay?.hourlyCompleted || [];
-// } else if (selectedRange === 'Present Week') {
-// labels = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
-// dataPoints = data?.presentWeek?.dailyCompleted?.map(d => d.value) || [];
-// } else if (selectedRange === 'Previous Week') {
-// labels = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
-// dataPoints = data?.previousWeek?.dailyCompleted?.map(d => d.value) || [];
-// } else if (selectedRange === 'Previous Weeks') {
-// labels = data?.previousWeeks?.map((w, i) => `Week ${i + 1}`);
-// dataPoints = data?.previousWeeks?.map(
-// (w) => Math.round((w.hourlyCompleted?.reduce((a, b) => a + b, 0) || 0) / 13)
-// );
-// }
-
-// return {
-// labels,
-// datasets: [
-// {
-// label: 'Completed',
-// data: dataPoints,
-// backgroundColor: 'rgba(34, 197, 94, 0.7)',
-// borderColor: 'rgba(22, 163, 74, 1)',
-// borderWidth: 1,
-// borderRadius: 6,
-// type: 'bar'
-// },
-// {
-// label: 'Threshold',
-// data: Array(dataPoints.length).fill(redLineValue),
-// borderColor: 'rgba(239, 68, 68, 1)',
-// borderWidth: 2,
-// borderDash: [5, 5],
-// pointRadius: 0,
-// fill: false,
-// type: 'line'
-// },
-// {
-// label: 'Tracking Line',
-// data: dataPoints,
-// borderColor: 'rgba(59, 130, 246, 1)',
-// backgroundColor: 'transparent',
-// borderWidth: 2,
-// pointRadius: 3,
-// tension: 0.3,
-// type: 'line'
-// }
-// ]
-// };
-// }, [selectedRange, data, redLineValue]);
-
 
 
 const breakdownFields = ['Functional', 'Calibration', 'Accuracy', 'NIC', 'FinalTest'];
 
-// const hourlyLabels = timeData.map((time, i) => ({
-// time,
-// Functional: Math.floor(Math.random() * 50) + 50,
-// Calibration: Math.floor(Math.random() * 30) + 20,
-// Accuracy: Math.floor(Math.random() * 40) + 30,
-// NIC: Math.floor(Math.random() * 20) + 10,
-// FinalTest: Math.floor(Math.random() * 15) + 5,
-// }));
 
-
-// const barDataHourlyDetails = {
-// labels: hourlyLabels,
-// datasets: breakdownFields.map((key, i) => ({
-// label: key,
-// data: data?.hourlyDetails?.map(item => item[key]) || [],
-// backgroundColor: [
-// '#3B82F6', // Functional
-// '#F59E0B', // Calibration
-// '#10B981', // Accuracy
-// '#EF4444', // NIC
-// '#8B5CF6'  // FinalInit
-// ][i],
-// barThickness: 16,         // ✅ Set individual bar thickness
-// categoryPercentage: 0.7,  // ✅ Space between groups
-// barPercentage: 0.9,       // ✅ Space between bars inside group
-// borderRadius: 4,
-// }))
-// };
 
 const shiftTimes = {
 Shift1: { start: '06:00', end: '14:00' },
@@ -1039,7 +868,6 @@ grid: { drawBorder: false },
 </div>
 </section>
 
-
 <section className="bg-white rounded-2xl shadow-lg p-6 mt-6 font-poppins">
 <h2 className="text-2xl font-bold text-center text-gray-700 mb-8">Yield & Daily Reports</h2>
 
@@ -1050,6 +878,7 @@ animate={{ opacity: 1, y: 0 }}
 transition={{ duration: 0.5 }}
 className="grid grid-cols-1 md:grid-cols-2 gap-6"
 >
+
 {/* First Yield Report Box */}
 <div className="bg-gray-50 rounded-xl shadow p-6 flex flex-col items-center">
 <h3 className="text-lg font-semibold text-gray-700 mb-4">First Yield Report</h3>
@@ -1057,7 +886,6 @@ className="grid grid-cols-1 md:grid-cols-2 gap-6"
 <Pie data={firstFieldPieData} options={firstFieldPieOptions} plugins={[ChartDataLabels]} />
 </div>
 </div>
-
 
 {/* Daily Report Box */}
 <div className="bg-gray-50 rounded-xl shadow p-6 flex flex-col items-center">
@@ -1068,8 +896,6 @@ className="grid grid-cols-1 md:grid-cols-2 gap-6"
 </div>
 </motion.div>
 </section>
-
-
 
 <ChatBot />
 </main>
