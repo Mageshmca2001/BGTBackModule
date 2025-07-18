@@ -486,6 +486,15 @@ pointStyle: 'rectRounded',
 },
 },
 tooltip: {
+titleFont: {
+family: 'Poppins',
+size: 14,
+weight: 'bold',
+},
+bodyFont: {
+family: 'Poppins',
+size: 13,
+},
 callbacks: {
 label: function (ctx) {
 const label = ctx.label;
@@ -546,6 +555,15 @@ pointStyle: 'rectRounded',
 },
 },
 tooltip: {
+titleFont: {
+family: 'Poppins',
+size: 14,
+weight: 'bold',
+},
+bodyFont: {
+family: 'Poppins',
+size: 13,
+},
 callbacks: {
 label: function (ctx) {
 const label = ctx.label;
@@ -700,7 +718,8 @@ const dateObj = new Date(item.date);
 const dayName = labels[dateObj.getDay()];
 const dayDate = dateObj.toLocaleDateString('en-GB', {
 day: '2-digit',
-month: 'short'
+month: 'short',
+year: 'numeric' // <-- added year
 });
 
 return (
