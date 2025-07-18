@@ -30,6 +30,8 @@ Legend,
 ChartDataLabels
 );
 
+import LoadingDots from '../components/Loading';
+
 const API_BASE = import.meta.env.VITE_API || 'http://192.168.29.50:4000';
 
 // Animation Variants
@@ -54,6 +56,8 @@ ease: 'easeOut'
 }
 }
 };
+
+
 
 
 
@@ -425,13 +429,7 @@ return data.hourlyDetails;
 // };
 // }, [selectedRange, data, redLineValue]);
 
-const LoadingDots = () => (
-<div className="flex justify-center items-center h-screen text-2xl text-blue-600 font-poppins">
-Loading<span className="animate-bounce mx-1">.</span>
-<span className="animate-bounce mx-1 delay-150">.</span>
-<span className="animate-bounce mx-1 delay-300">.</span>
-</div>
-);
+
 
 const breakdownFields = ['Functional', 'Calibration', 'Accuracy', 'NIC', 'FinalTest'];
 
@@ -558,40 +556,49 @@ return acc;
 const colors = ['#3B82F6', '#F59E0B', '#10B981', '#EF4444', '#8B5CF6'];
 
 const datasets = [
+// Static 'Completed' dataset
 {
 label: 'Completed',
 data: completedData,
-backgroundColor: 'rgba(34, 197, 94, 0.7)',
+backgroundColor: 'rgba(34, 197, 94, 0.7)', // Green
 borderColor: 'rgba(22, 163, 74, 1)',
 borderWidth: 1,
 barThickness: 18,
-categoryPercentage: 0.6,  // <--- more space between groups
-barPercentage: 0.9,
+barPercentage: 0.7,
+categoryPercentage: 0.9,   // controls spacing between bars in the same group
 borderRadius: 0,
 },
+
+// Dynamically mapped breakdown bars
 ...breakdownFields.map((key, i) => ({
 label: key,
 data: breakdownData[key] || [],
 backgroundColor: colors[i],
+borderColor: colors[i],
+borderWidth: 1,
 barThickness: 18,
-categoryPercentage: 0.6,  // <--- same here
-barPercentage: 0.9,
+barPercentage: 0.7,
+categoryPercentage: 0.9,
 borderRadius: 0,
 })),
+
+// Tracking line
 {
 label: 'Tracking Line',
 data: completedData,
-borderColor: 'rgba(59, 130, 246, 1)',
+borderColor: 'rgba(59, 130, 246, 1)', // Blue
 backgroundColor: 'transparent',
 borderWidth: 2,
 pointRadius: 3,
 tension: 0.3,
 type: 'line',
 },
+
+// Threshold line
 {
 label: 'Threshold',
 data: Array(completedData.length).fill(redLineValue),
-borderColor: 'rgba(239, 68, 68, 1)',
+borderColor: 'rgba(239, 68, 68, 1)', // Red
 borderWidth: 2,
 borderDash: [5, 5],
 pointRadius: 0,
@@ -599,6 +606,7 @@ fill: false,
 type: 'line',
 },
 ];
+
 
 
 
@@ -719,6 +727,28 @@ return `${label}: ${value}`;
 },
 }
 };
+
+
+const [visibleDatasets, setVisibleDatasets] = useState({
+Completed: true,
+Functional: true,
+Calibration: true,
+Accuracy: true,
+NIC: true,
+FinalTest: true,
+});
+
+const toggleDataset = (label) => {
+setVisibleDatasets((prev) => ({
+...prev,
+[label]: !prev[label],
+}));
+};
+
+const filteredDatasets = useMemo(() => {
+return datasets.filter((ds) => visibleDatasets[ds.label] !== false);
+}, [datasets, visibleDatasets]);
+
 
 
 // ⛔ Error or Loading
@@ -865,24 +895,62 @@ disableHover
 
 </section>
 
-<section className="bg-white rounded-2xl shadow-lg p-6 mt-4 font-poppins">
-<h2 className="text-2xl font-bold text-center text-gray-700 mb-6">Meter Analysis Dashboard</h2>
-<div className="grid grid-cols-1 gap-6 font-poppins">
-<div className="relative flex justify-center items-center mb-4">
-<h3 className="text-lg font-semibold text-gray-700 text-center">
+<section className="bg-white rounded-2xl shadow-lg p-4 sm:p-6 mt-4 font-poppins">
+<h2 className="text-xl sm:text-2xl font-bold text-center text-gray-700 mb-4 sm:mb-6">
+Meter Analysis Dashboard
+</h2>
+
+{/* 📌 Custom Legend Block with Toggle */}
+<div className="flex flex-wrap justify-center gap-4 text-sm text-gray-700 mb-4">
+{[
+{ label: 'Completed', color: 'bg-green-400', border: 'border-green-600' },
+{ label: 'Functional', color: 'bg-blue-500' },
+{ label: 'Calibration', color: 'bg-orange-400' },
+{ label: 'Accuracy', color: 'bg-emerald-500' },
+{ label: 'NIC', color: 'bg-red-500' },
+{ label: 'FinalTest', color: 'bg-purple-500' },
+].map(({ label, color, border }) => (
+<div
+key={label}
+onClick={() => toggleDataset(label)}
+className="flex items-center gap-2 cursor-pointer"
+>
+<span
+className={`w-4 h-3 rounded-sm ${color} ${
+border || ''
+} border ${visibleDatasets[label] ? '' : '!bg-gray-200 !border-gray-400'}`}
+></span>
+<span className={`${visibleDatasets[label] ? '' : 'text-gray-400 line-through'}`}>
+{label}
+</span>
+</div>
+))}
+{/* Static lines for Tracking & Threshold */}
+<div className="flex items-center gap-2">
+<span className="w-4 h-0.5 border border-blue-500"></span> Tracking Line
+</div>
+<div className="flex items-center gap-2">
+<span className="w-4 h-0.5 border border-red-500 border-dashed"></span> Threshold
+</div>
+</div>
+
+<div className="grid grid-cols-1 gap-4 sm:gap-6">
+<div className="relative flex flex-col sm:flex-row justify-center items-center gap-2 mb-4">
+<h3 className="text-base sm:text-lg font-semibold text-gray-700 text-center sm:text-left">
 {['Present Week', 'Previous Week'].includes(selectedRange)
 ? 'Weekly Progress & Breakdown: '
 : 'Hourly Progress & Breakdown: '}
-<span className="inline-block text-primary">
+<span className="inline-block text-primary break-words text-sm sm:text-base">
 [Completed, Functional, Calibration, Accuracy, NIC, FinalTest]
 </span>
 </h3>
+
 {selectedRange === 'Day' && (
-<div className="absolute right-0">
+<div className="sm:absolute sm:right-0 w-full sm:w-auto">
 <select
 value={selectedShift}
 onChange={(e) => setSelectedShift(e.target.value)}
-className="border border-gray-300 rounded px-3 py-1 text-sm bg-white shadow"
+className="border border-gray-300 rounded px-3 py-2 text-sm bg-white shadow w-full sm:w-auto"
 >
 <option value="All">All Shifts</option>
 <option value="Shift1">06:00 - 14:00</option>
@@ -892,34 +960,27 @@ className="border border-gray-300 rounded px-3 py-1 text-sm bg-white shadow"
 </div>
 )}
 </div>
+
 <motion.div
 key={`${selectedRange}-chart-${refreshKey}`}
 initial={{ opacity: 0 }}
 animate={{ opacity: 1 }}
 transition={{ duration: 0.4 }}
 >
-<div className="w-full overflow-x-auto py-6">
+<div className="w-full overflow-x-auto pb-4">
 <div
-className={`h-[300px] ${
-['Present Week', 'Previous Week'].includes(selectedRange)
-? 'w-full'
-: filteredHourlyDetails.length >= 24
-? 'min-w-[2400px]'
-: 'w-full'
-}`}
+className="h-[300px]"
+style={{
+minWidth: `${Math.max(labels.length * 140, 1000)}px`,
+}}
 >
 <Bar
-data={{ labels, datasets }}
+data={{ labels, datasets: filteredDatasets }}
 options={{
 responsive: true,
 maintainAspectRatio: false,
 plugins: {
-legend: {
-position: 'top',
-labels: {
-font: { family: 'Poppins', size: 13 },
-},
-},
+legend: { display: false },
 tooltip: {
 enabled: true,
 mode: 'index',
@@ -945,20 +1006,20 @@ padding: 10,
 cornerRadius: 8,
 boxPadding: 4,
 },
-datalabels: {
-display: false, // ✅ hides all bar numbers
+datalabels: { display: false },
 },
-},
-
 interaction: {
 mode: 'index',
 intersect: false,
 },
 scales: {
 x: {
+stacked: false,
 ticks: {
-font: { family: 'Poppins' },
+autoSkip: false,
+font: { family: 'Poppins', size: 12 },
 },
+grid: { display: false },
 },
 y: {
 beginAtZero: true,
@@ -967,18 +1028,16 @@ ticks: {
 stepSize: 200,
 font: { family: 'Poppins' },
 },
+grid: { drawBorder: false },
 },
 },
 }}
 />
-
 </div>
 </div>
 </motion.div>
 </div>
 </section>
-
-
 
 
 <section className="bg-white rounded-2xl shadow-lg p-6 mt-6 font-poppins">
@@ -1019,4 +1078,3 @@ className="grid grid-cols-1 md:grid-cols-2 gap-6"
 };
 
 export default Dashboard;
-

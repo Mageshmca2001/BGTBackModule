@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import axios from 'axios';
 
 const Production = () => {
-const maintenanceMode = true;
+const maintenanceMode = false;
 
 const [finalParameters, setFinalParameters] = useState([]);
 const [finalMatchedParameters, setFinalMatchedParameters] = useState(null);
