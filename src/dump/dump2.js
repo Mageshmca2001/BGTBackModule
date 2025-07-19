@@ -287,7 +287,7 @@ return data.hourlyDetails;
 
 
 
-const breakdownFields = ['Functional', 'Calibration', 'Accuracy', 'NIC', 'FinalTest'];
+const breakdownFields = ['Functional', 'CalibAccuracy', 'NIC', 'FinalTest'];
 
 const getDailyReportTitle = () => {
 switch (selectedRange) {
@@ -369,32 +369,38 @@ Object.values(item)
 const breakdownData = ['Present Week', 'Previous Week'].includes(selectedRange)
 ? (() => {
 const weekData =
-data?.[selectedRange === 'Present Week' ? 'presentWeek' : 'previousWeek']?.dailyCompleted || [];
+data?.[selectedRange === 'Present Week' ? 'presentWeek' : 'previousWeek']
+?.dailyCompleted || [];
 const summary = weekData.reduce(
 (acc, day) => {
 acc.Functional.push(day.value * 0.4);
-acc.Calibration.push(day.value * 0.2);
-acc.Accuracy.push(day.value * 0.2);
+acc.CalibAccuracy.push(day.value * 0.4); // ✅ merged
 acc.NIC.push(day.value * 0.1);
 acc.FinalTest.push(day.value * 0.1);
 return acc;
 },
 {
 Functional: [],
-Calibration: [],
-Accuracy: [],
+CalibAccuracy: [], // ✅ new merged key
 NIC: [],
 FinalTest: [],
 }
 );
 return summary;
 })()
-: breakdownFields.reduce((acc, key) => {
+: ['Functional', 'CalibAccuracy', 'NIC', 'FinalTest'].reduce((acc, key) => {
+if (key === 'CalibAccuracy') {
 acc[key] = filteredHourlyDetails
 .filter((item) => isTimeInShift(item.time, selectedShift))
-.map((item) => item[key]);
+.map((item) => (item['Calibration'] || 0) + (item['Accuracy'] || 0));
+} else {
+acc[key] = filteredHourlyDetails
+.filter((item) => isTimeInShift(item.time, selectedShift))
+.map((item) => item[key] || 0);
+}
 return acc;
 }, {});
+
 
 const colors = ['#3B82F6', '#F59E0B', '#10B981', '#EF4444', '#8B5CF6'];
 
@@ -414,7 +420,7 @@ borderRadius: 0,
 
 // Dynamically mapped breakdown bars
 ...breakdownFields.map((key, i) => ({
-label: key,
+label: key === 'CalibAccuracy' ? 'Calibration + Accuracy' : key,
 data: breakdownData[key] || [],
 backgroundColor: colors[i],
 borderColor: colors[i],
@@ -793,8 +799,7 @@ Meter Analysis Dashboard
 {[
 { label: 'Completed', color: 'bg-green-400', border: 'border-green-600' },
 { label: 'Functional', color: 'bg-blue-500' },
-{ label: 'Calibration', color: 'bg-orange-400' },
-{ label: 'Accuracy', color: 'bg-emerald-500' },
+{ label: 'CalibAccuracy', color: 'bg-orange-400' }, // ✅ new label
 { label: 'NIC', color: 'bg-red-500' },
 { label: 'FinalTest', color: 'bg-purple-500' },
 ].map(({ label, color, border }) => (
@@ -1015,27 +1020,27 @@ Yield & {getDailyReportTitle()}
 {/* 🔵 Daily Report Totals */}
 <div className="mb-6">
 <h4 className="text-base4 font-semibold text-sky-700 mb-4">
-{getDailyReportTitle()}
+  {getDailyReportTitle()}
 </h4>
 
 <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-center">
 <div className="bg-white border rounded p-4 shadow">
-<div className="text-sm text-gray-600">Passed</div>
-<div className="text-xl font-bold text-green-600">
-{dailyReportPieData.datasets[0].data?.[0]?.toFixed(0) ?? 0}
-</div>
-</div>
-<div className="bg-white border rounded p-4 shadow">
-<div className="text-sm text-gray-600">Failed</div>
-<div className="text-xl font-bold text-red-500">
-{dailyReportPieData.datasets[0].data?.[1]?.toFixed(0) ?? 0}
-</div>
+  <div className="text-sm text-gray-600">Passed</div>
+  <div className="text-xl font-bold text-green-600">
+    {dailyReportPieData.datasets[0].data?.[0]?.toFixed(0) ?? 0}
+  </div>
 </div>
 <div className="bg-white border rounded p-4 shadow">
-<div className="text-sm text-gray-600">Reworked</div>
-<div className="text-xl font-bold text-blue-600">
-{dailyReportPieData.datasets[0].data?.[2]?.toFixed(0) ?? 0}
+  <div className="text-sm text-gray-600">Failed</div>
+  <div className="text-xl font-bold text-red-500">
+    {dailyReportPieData.datasets[0].data?.[1]?.toFixed(0) ?? 0}
+  </div>
 </div>
+<div className="bg-white border rounded p-4 shadow">
+  <div className="text-sm text-gray-600">Reworked</div>
+  <div className="text-xl font-bold text-blue-600">
+    {dailyReportPieData.datasets[0].data?.[2]?.toFixed(0) ?? 0}
+  </div>
 </div>
 </div>
 </div>

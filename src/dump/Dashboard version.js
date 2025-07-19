@@ -287,7 +287,8 @@ return data.hourlyDetails;
 
 
 
-const breakdownFields = ['Functional', 'Calibration', 'Accuracy', 'NIC', 'FinalTest'];
+const breakdownFields = ['Functional', 'Calibration&Accuracy', 'NIC', 'FinalTest'];
+
 
 const getDailyReportTitle = () => {
 switch (selectedRange) {
@@ -390,13 +391,20 @@ FinalTest: [],
 return summary;
 })()
 : breakdownFields.reduce((acc, key) => {
+if (key === 'Calibration&Accuracy') {
+acc[key] = filteredHourlyDetails
+.filter((item) => isTimeInShift(item.time, selectedShift))
+.map((item) => (item['Calibration'] || 0) + (item['Accuracy'] || 0));
+} else {
 acc[key] = filteredHourlyDetails
 .filter((item) => isTimeInShift(item.time, selectedShift))
 .map((item) => item[key]);
+}
 return acc;
 }, {});
 
-const colors = ['#3B82F6', '#F59E0B', '#10B981', '#EF4444', '#8B5CF6'];
+
+const colors = ['#966ef5ff', '#f38e46ff', '#02fcdfff', '#e05e99ff'];
 
 const datasets = [
 // Static 'Completed' dataset
@@ -619,11 +627,11 @@ return `${label}: ${value}`;
 const [visibleDatasets, setVisibleDatasets] = useState({
 Completed: true,
 Functional: true,
-Calibration: true,
-Accuracy: true,
+'Calibration&Accuracy': true,
 NIC: true,
 FinalTest: true,
 });
+
 
 const toggleDataset = (label) => {
 setVisibleDatasets((prev) => ({
@@ -792,11 +800,10 @@ Meter Analysis Dashboard
 <div className="flex flex-wrap justify-center gap-4 text-sm text-gray-700 mb-4">
 {[
 { label: 'Completed', color: 'bg-green-400', border: 'border-green-600' },
-{ label: 'Functional', color: 'bg-blue-500' },
-{ label: 'Calibration', color: 'bg-orange-400' },
-{ label: 'Accuracy', color: 'bg-emerald-500' },
-{ label: 'NIC', color: 'bg-red-500' },
-{ label: 'FinalTest', color: 'bg-purple-500' },
+{ label: 'Functional', color: 'bg-purple-500' },
+{ label: 'Calibration&Accuracy', color: 'bg-orange-400' },
+{ label: 'NIC', color: 'bg-teal-500' },
+{ label: 'FinalTest', color: 'bg-magenta-500' },
 ].map(({ label, color, border }) => (
 <div
 key={label}

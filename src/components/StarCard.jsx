@@ -54,7 +54,10 @@ flex flex-col justify-between h-full`}
 Functional: {functional}
 </div>
 <div className="w-full   text-white  text-xs md:text-sm px-4 py-2 rounded shadow-md border border-white hover:bg-gray-600 hover:text-white transition text-left">
-Calibration & Accuracy: {calibration},{accuracy}
+Calibration: {calibration}
+</div>
+<div className="w-full   text-white  text-xs md:text-sm px-4 py-2 rounded shadow-md border border-white hover:bg-gray-600 hover:text-white transition text-left">
+Accuracy: {accuracy}
 </div>
 <div className="w-full  text-white text-xs md:text-sm px-4 py-2 rounded shadow-md border border-white hover:bg-gray-600 hover:text-white transition text-left">
 NIC: {nic}
