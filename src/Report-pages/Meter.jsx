@@ -32,6 +32,8 @@ const [stageFiveCollapsed, setStageFiveCollapsed] = useState(true);
 const [loading, setLoading] = useState(false);
 const [maintenanceMode, setMaintenanceMode] = useState(false);
 
+
+
 const isExportDisabled = filteredData.length === 0;
 
 const hardwareKeys = [
@@ -280,15 +282,17 @@ isExportDisabled
 
 {notFoundMessage.visible && (
 <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
-<div className="bg-white rounded-lg shadow-lg p-6 w-full max-w-md text-center">
-<h2 className="text-xl font-semibold text-red-600 mb-4">Error</h2>
-<p className="text-gray-800 mb-6">{notFoundMessage.message}</p>
+<div className="bg-white p-6 rounded-lg shadow-lg w-[90%] max-w-md">
+<h2 className="text-xl font-bold text-center text-red-600 mb-4 font-[poppins]">Error</h2>
+<p className="text-gray-800 text-center font-[poppins]">{notFoundMessage.message}</p>
+<div className="flex justify-center mt-4">
 <button
 onClick={() => setNotFoundMessage({ visible: false, message: '' })}
-className="bg-red-600 text-white px-6 py-2 rounded hover:bg-red-700 transition"
+className="bg-primary text-white px-6 py-2 rounded hover:bg-gray-700 font-[poppins]"
 >
 OK
 </button>
+</div>
 </div>
 </div>
 )}
@@ -359,6 +363,7 @@ setStageFiveCollapsed={setStageFiveCollapsed}
 </>
 )}
 </div>
+
 );
 };
 

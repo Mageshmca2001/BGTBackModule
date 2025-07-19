@@ -16,6 +16,7 @@ const [dateTime, setDateTime] = useState(new Date());
 const [loading, setLoading] = useState(false);
 const [modalMessage, setModalMessage] = useState('');
 const [showModal, setShowModal] = useState(false);
+
 const isExportDisabled = filteredData.length === 0;
 
 const chartRef = useRef(null);
@@ -72,7 +73,7 @@ new Promise((_, reject) => setTimeout(() => reject(new Error('Request timeout'))
 
 const handleGenerateReport = async () => {
 if (!selectedMonth || !selectedYear) {
-setModalMessage('Please select both month and year to generate the report.');
+setModalMessage('❗ Please select both month and year to generate the report.');
 setShowModal(true);
 return;
 }
@@ -96,9 +97,14 @@ setItemsPerPage(result.length);
 setData(result);
 setFilteredData(result);
 setCurrentPage(1);
+
+if (result.length === 0) {
+setModalMessage('⚠️ No data found for the selected month and year.');
+setShowModal(true);
+}
 } catch (error) {
 console.error('❌ Fetch error:', error);
-setModalMessage('Error fetching data. Please check your network or try again.');
+setModalMessage('❌ Error fetching data. Please check your network or try again.');
 setShowModal(true);
 } finally {
 setLoading(false);
@@ -163,6 +169,10 @@ const paginatedData = filteredData.slice(
 (currentPage - 1) * itemsPerPage,
 currentPage * itemsPerPage
 );
+
+const totalTested = filteredData.reduce((acc, item) => acc + (parseInt(item.tested) || 0), 0);
+const totalCompleted = filteredData.reduce((acc, item) => acc + (parseInt(item.completed) || 0), 0);
+const totalReworked = filteredData.reduce((acc, item) => acc + (parseInt(item.reworked) || 0), 0);
 
 useEffect(() => {
 if (!chartRef.current || filteredData.length === 0) return;
@@ -247,9 +257,7 @@ maxTicksLimit: 12,
 });
 }, [filteredData]);
 
-const totalTested = filteredData.reduce((acc, item) => acc + (parseInt(item.tested) || 0), 0);
-const totalCompleted = filteredData.reduce((acc, item) => acc + (parseInt(item.completed) || 0), 0);
-const totalReworked = filteredData.reduce((acc, item) => acc + (parseInt(item.reworked) || 0), 0);
+
 
 return (
 <>
@@ -381,6 +389,11 @@ onChange={handleSearchChange}
 <thead>
 <tr>
 <th className="border text-center text-base bg-primary font-[poppins] text-white px-4 py-2">Date</th>
+<th className="border text-center text-base font-[poppins] bg-primary text-white px-4 py-2">FunctionalTest</th>
+<th className="border text-center text-base font-[poppins] bg-primary text-white px-4 py-2">CalibrationTest</th>
+<th className="border text-center text-base font-[poppins] bg-primary text-white px-4 py-2">AccuracyTest</th>
+<th className="border text-center text-base font-[poppins] bg-primary text-white px-4 py-2">NICCOMTest</th>
+<th className="border text-center text-base font-[poppins] bg-primary text-white px-4 py-2">FinalTest</th>
 <th className="border text-center text-base bg-primary font-[poppins]  text-white px-4 py-2">Tested</th>
 <th className="border text-center text-base bg-primary font-[poppins] text-white px-4 py-2">Completed</th>
 <th className="border text-center text-base bg-primary font-[poppins] text-white px-4 py-2">Reworked</th>
@@ -389,7 +402,7 @@ onChange={handleSearchChange}
 <tbody>
 {paginatedData.length === 0 ? (
 <tr>
-<td colSpan="4" className="text-center font-[poppins] py-4 text-gray-500">
+<td colSpan="10" className="text-center font-[poppins] py-4 text-gray-500">
 No data available for the selected Month && Year or search.
 </td>
 </tr>
@@ -457,6 +470,26 @@ Next
 <div className="mt-4">
 <h2 className="text-xl font-bold text-primary font-[poppins] mb-2">Total Summary</h2>
 <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-center font-[poppins]">
+    <div className="bg-purple-100 text-purple-800 p-4 rounded shadow">
+<p className="text-lg">Total FunctionalTest</p>
+<p className="text-2xl font-bold mt-0">{totalTested}</p>
+</div>
+<div className="bg-purple-100 text-purple-800 p-4 rounded shadow">
+<p className="text-lg">Total CalibrationTest</p>
+<p className="text-2xl font-bold mt-0">{totalTested}</p>
+</div>
+<div className="bg-purple-100 text-purple-800 p-4 rounded shadow">
+<p className="text-lg">Total AccuracyTest</p>
+<p className="text-2xl font-bold mt-0">{totalTested}</p>
+</div>
+<div className="bg-purple-100 text-purple-800 p-4 rounded shadow">
+<p className="text-lg">Total NICCOMTest</p>
+<p className="text-2xl font-bold mt-0">{totalTested}</p>
+</div>
+<div className="bg-purple-100 text-purple-800 p-4 rounded shadow">
+<p className="text-lg">Total FinalTest</p>
+<p className="text-2xl font-bold mt-0">{totalTested}</p>
+</div>
 <div className="bg-purple-100 text-purple-800 p-4 rounded shadow">
 <p className="text-lg">Total Tested</p>
 <p className="text-2xl font-bold mt-0">{totalTested}</p>
@@ -474,6 +507,24 @@ Next
 </div>
 )}
 </div>
+{/* Insert this modal block at the very END */}
+{showModal && (
+<div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
+<div className="bg-white p-6 rounded-lg shadow-lg w-[90%] max-w-md">
+<h2 className="text-xl font-bold text-red-600 mb-4 font-[poppins]">Alert</h2>
+<p className="text-gray-800 font-[poppins]">{modalMessage}</p>
+<div className="mt-4 flex justify-end">
+<button
+onClick={() => setShowModal(false)}
+className="bg-primary text-white px-4 py-2 rounded hover:bg-gray-700 font-[poppins]"
+>
+Close
+</button>
+</div>
+</div>
+</div>
+)}
+   
 </>
 );
 };

@@ -20,6 +20,8 @@ const [currentPage, setCurrentPage] = useState(1);
 const [itemsPerPage, setItemsPerPage] = useState(10);
 const [dateTime, setDateTime] = useState(new Date());
 const [loading, setLoading] = useState(false);
+const [modalMessage, setModalMessage] = useState('');
+const [showModal, setShowModal] = useState(false);
 const isExportDisabled = filteredData.length === 0;
 
 const chartRef = useRef(null);
@@ -43,17 +45,14 @@ const previousDay = subDays(today, 1);
 const startDate = subDays(today, 7);
 
 if (selectedDay === '01') {
-return `${format(today, 'EEEE dd/MM/yyyy hh:mm:ss a')}`;
+return `${format(today, 'EEEE dd/MM/yyyy ')}`;
 }
-
 if (selectedDay === '02') {
 return `${format(previousDay, 'EEEE dd/MM/yyyy')}`;
 }
-
 if (selectedDay === '03') {
 return `From ${format(startDate, 'EEEE dd/MM/yyyy')} to ${format(previousDay, 'EEEE dd/MM/yyyy')}`;
 }
-
 return '';
 };
 
@@ -97,7 +96,8 @@ setCurrentPage(1);
 
 const handleGenerateReport = async () => {
 if (!selectedDay) {
-alert('Please select Day to generate the report.');
+setModalMessage('❗ Please select the day to generate the report.');
+setShowModal(true);
 return;
 }
 
@@ -112,6 +112,8 @@ const todayStr = format(today, 'yyyy-MM-dd');
 const previousDay = subDays(today, 1);
 const previousDayStr = format(previousDay, 'yyyy-MM-dd');
 const fromDate = subDays(today, 7);
+const monthStart = startOfMonth(today);
+const monthEnd = endOfMonth(today);
 
 if (selectedDay === "01") {
 filteredByDay = fetchedData.filter((item) => {
@@ -128,19 +130,34 @@ filteredByDay = fetchedData.filter((item) => {
 const itemDate = new Date(item.date);
 return itemDate >= fromDate && itemDate <= previousDay;
 });
+} else if (selectedDay === "04") {
+filteredByDay = fetchedData.filter((item) => {
+const itemDate = new Date(item.date);
+return itemDate >= monthStart && itemDate <= monthEnd;
+});
 } else {
 filteredByDay = [];
+}
+
+// 🚨 Check if no data found
+if (filteredByDay.length === 0) {
+setModalMessage('⚠️ No data found for the selected period.');
+setShowModal(true);
 }
 
 setOriginalData(filteredByDay);
 setFilteredData(filteredByDay);
 setCurrentPage(1);
+
 } catch (error) {
 console.error("Error fetching report data:", error);
+setModalMessage('❌  Error fetching data. Please check your network or try again.');
+setShowModal(true);
 } finally {
 setLoading(false);
 }
 };
+
 
 const handleExport = async () => {
 setLoading(true);
@@ -281,6 +298,7 @@ grid: { display: false }
 }, [filteredData]);
 
 return (
+<>
 <div className="w-full overflow-x-hidden px-0 pb-10">
 <h1 className="text-3xl font-[poppins] text-primary">Daily Report</h1>
 
@@ -401,6 +419,11 @@ onChange={handleSearchChange}
 <thead>
 <tr>
 <th className="border text-center text-base font-[poppins] bg-primary text-white px-4 py-2">Hours</th>
+<th className="border text-center text-base font-[poppins] bg-primary text-white px-4 py-2">FunctionalTest</th>
+<th className="border text-center text-base font-[poppins] bg-primary text-white px-4 py-2">CalibrationTest</th>
+<th className="border text-center text-base font-[poppins] bg-primary text-white px-4 py-2">AccuracyTest</th>
+<th className="border text-center text-base font-[poppins] bg-primary text-white px-4 py-2">NICCOMTest</th>
+<th className="border text-center text-base font-[poppins] bg-primary text-white px-4 py-2">FinalTest</th>
 <th className="border text-center text-base font-[poppins] bg-primary text-white px-4 py-2">Tested</th>
 <th className="border text-center text-base font-[poppins] bg-primary text-white px-4 py-2">Completed</th>
 <th className="border text-center text-base font-[poppins] bg-primary text-white px-4 py-2">Reworked</th>
@@ -409,7 +432,7 @@ onChange={handleSearchChange}
 <tbody>
 {paginatedData.length === 0 ? (
 <tr>
-<td colSpan="4" className="text-center font-[poppins] py-4 text-gray-500">
+<td colSpan="10" className="text-center font-[poppins] py-4 text-gray-500">
 No data available for the selected day or search.
 </td>
 </tr>
@@ -478,6 +501,26 @@ Next
 <h2 className="text-xl font-bold text-primary font-[poppins] mb-2">Total Summary</h2>
 <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-center font-[poppins]">
 <div className="bg-purple-100 text-purple-800 p-4 rounded shadow">
+<p className="text-lg">Total FunctionalTest</p>
+<p className="text-2xl font-bold mt-0">{totalTested}</p>
+</div>
+<div className="bg-purple-100 text-purple-800 p-4 rounded shadow">
+<p className="text-lg">Total CalibrationTest</p>
+<p className="text-2xl font-bold mt-0">{totalTested}</p>
+</div>
+<div className="bg-purple-100 text-purple-800 p-4 rounded shadow">
+<p className="text-lg">Total AccuracyTest</p>
+<p className="text-2xl font-bold mt-0">{totalTested}</p>
+</div>
+<div className="bg-purple-100 text-purple-800 p-4 rounded shadow">
+<p className="text-lg">Total NICCOMTest</p>
+<p className="text-2xl font-bold mt-0">{totalTested}</p>
+</div>
+<div className="bg-purple-100 text-purple-800 p-4 rounded shadow">
+<p className="text-lg">Total FinalTest</p>
+<p className="text-2xl font-bold mt-0">{totalTested}</p>
+</div>
+<div className="bg-purple-100 text-purple-800 p-4 rounded shadow">
 <p className="text-lg">Total Tested</p>
 <p className="text-2xl font-bold mt-0">{totalTested}</p>
 </div>
@@ -494,6 +537,24 @@ Next
 </div>
 )}
 </div>
+{/* Insert this modal block at the very END */}
+{showModal && (
+<div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
+<div className="bg-white p-6 rounded-lg shadow-lg w-[90%] max-w-md">
+<h2 className="text-xl font-bold text-red-600 mb-4 font-[poppins]">Alert</h2>
+<p className="text-gray-800 font-[poppins]">{modalMessage}</p>
+<div className="mt-4 flex justify-end">
+<button
+onClick={() => setShowModal(false)}
+className="bg-primary text-white px-4 py-2 rounded hover:bg-gray-700 font-[poppins]"
+>
+Close
+</button>
+</div>
+</div>
+</div>
+)}
+</>
 );
 };
 
