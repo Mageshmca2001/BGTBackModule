@@ -824,7 +824,7 @@ border || ''
 
 <div className="grid grid-cols-1 gap-4 sm:gap-6">
 <div className="relative flex flex-col sm:flex-row justify-center items-center gap-2 mb-4">
-<h3 className="text-base sm:text-lg font-semibold text-gray-700 text-center sm:text-left">
+<h3 className="text-base sm:text-lg font-semibold text-primary text-center sm:text-left">
 {['Present Week', 'Previous Week'].includes(selectedRange)
 ? 'Weekly Progress & Breakdown: '
 : 'Hourly Progress & Breakdown: '}
@@ -838,7 +838,7 @@ border || ''
 <select
 value={selectedShift}
 onChange={(e) => setSelectedShift(e.target.value)}
-className="border border-gray-300 rounded px-3 py-2 text-sm bg-white shadow w-full sm:w-auto"
+className="border border-gray-300 rounded px-3 py-2 text-sm bg-white  text-primary shadow w-full sm:w-auto"
 >
 <option value="All">All Shifts</option>
 <option value="Shift1">06:00 - 14:00</option>
@@ -928,7 +928,7 @@ grid: { drawBorder: false },
 </section>
 
 <section className="bg-white rounded-2xl shadow-lg p-6 mt-6 font-poppins">
-<h2 className="text-2xl font-bold text-center text-gray-700 mb-8">Yield & Daily Reports</h2>
+<h2 className="text-2xl font-bold text-center text-primary mb-8">Yield & Daily Reports</h2>
 
 <motion.div
 key={`dualPie-${refreshKey}`}
@@ -940,7 +940,7 @@ className="grid grid-cols-1 md:grid-cols-2 gap-6"
 
 {/* First Yield Report Box */}
 <div className="bg-gray-50 rounded-xl shadow p-6 flex flex-col items-center">
-<h3 className="text-lg font-semibold text-gray-700 mb-4">First Yield Report</h3>
+<h3 className="text-lg font-semibold text-primary mb-4">First Yield Report</h3>
 <div className="relative w-[280px] h-[280px]">
 <Pie data={firstFieldPieData} options={firstFieldPieOptions} plugins={[ChartDataLabels]} />
 </div>
@@ -948,7 +948,7 @@ className="grid grid-cols-1 md:grid-cols-2 gap-6"
 
 {/* Daily Report Box */}
 <div className="bg-gray-50 rounded-xl shadow p-6 flex flex-col items-center">
-<h3 className="text-lg font-semibold text-gray-700 mb-4">
+<h3 className="text-lg font-semibold text-primary mb-4">
 {getDailyReportTitle()}
 </h3>
 <div className="relative w-[280px] h-[280px]">
@@ -962,7 +962,7 @@ className="grid grid-cols-1 md:grid-cols-2 gap-6"
 
 {/* 🔢 Total Summary Breakdown Section */}
 <motion.div>
-<h3 className="text-2xl font-semibold text-green-700 text-center mb-8">Total Summary</h3>
+<h3 className="text-2xl font-semibold text-primary text-center mb-8">Total Summary</h3>
 
 <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4 text-center justify-center">
 {/* ✅ Completed */}
@@ -993,11 +993,11 @@ return (
 
 {/* 📊 Total Summary Pie Chart Section */}
 <motion.div>
-<h3 className="text-2xl font-semibold text-green-700 text-center mt-12 mb-8">Total Summary Pie Chart</h3>
+<h3 className="text-2xl font-semibold text-primary text-center mt-12 mb-8">Total Summary Pie Chart</h3>
 
 {/* 🟢 First Yield Report Totals */}
 <div className="mb-6">
-<h2 className="text-2xl font-bold text-left text-sky-700 mb-8">
+<h2 className="text-2xl font-bold text-left text-primary mb-8">
 Yield & {getDailyReportTitle()}
 </h2>
 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-center">
@@ -1014,7 +1014,7 @@ Yield & {getDailyReportTitle()}
 
 {/* 🔵 Daily Report Totals */}
 <div className="mb-6">
-<h4 className="text-base4 font-semibold text-sky-700 mb-4">
+<h4 className="text-base4 font-semibold text-primary mb-4">
 {getDailyReportTitle()}
 </h4>
 
