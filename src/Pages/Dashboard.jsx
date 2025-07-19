@@ -997,8 +997,8 @@ return (
 
 {/* 🟢 First Yield Report Totals */}
 <div className="mb-6">
-<h2 className="text-2xl font-bold text-left text-primary mb-8">
-Yield & {getDailyReportTitle()}
+<h2 className="text-base4 font-bold text-left text-primary mb-8">
+First Yield & {getDailyReportTitle()}
 </h2>
 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-center">
 <div className="bg-white border rounded p-4 shadow">
