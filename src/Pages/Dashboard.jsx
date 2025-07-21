@@ -1081,7 +1081,7 @@ className="grid grid-cols-1 md:grid-cols-2 gap-6"
 
 {/* 🟢 First Yield Report Totals */}
 <div className="mb-6">
-<h2 className="text-base4 font-bold text-left text-primary mb-8">
+<h2 className="text-base4 font-bold text-left text-primary mb-6">
 First Yield & {getDailyReportTitle()}
 </h2>
 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-center">
