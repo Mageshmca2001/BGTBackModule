@@ -193,7 +193,19 @@ finalInit: 0,
 );
 };
 
-
+const getWeekDates = (baseDate = new Date()) => {
+const week = [];
+const date = new Date(baseDate);
+const day = date.getDay(); // 0 for Sunday, 1 for Monday, etc.
+// Set date to the beginning of the week (Sunday)
+date.setDate(date.getDate() - day);
+for (let i = 0; i < 7; i++) {
+const d = new Date(date);
+d.setDate(date.getDate() + i);
+week.push(d);
+}
+return week;
+};
 
 const Dashboard = () => {
 const [data, setData] = useState(null);
@@ -322,6 +334,16 @@ previousDay: {
 },
 presentWeek: presentWeekProcessed,
 previousWeek: previousWeekProcessed,
+firstFieldReport: {
+    passed: dailyData.FirstFieldReport?.passed || 0,
+    failed: dailyData.FirstFieldReport?.failed || 0,
+    reworked: dailyData.FirstFieldReport?.reworked || 0
+},
+dailyReport: {
+    passed: dailyData.DailyReport?.passed || 0,
+    failed: dailyData.DailyReport?.failed || 0,
+    reworked: dailyData.DailyReport?.reworked || 0
+},
 hourlyDetails // ✅ Now in desired format
 };
 
@@ -497,20 +519,19 @@ const datasets = [
 {
 label: 'Completed',
 data: completedData,
-backgroundColor: 'rgba(34, 197, 94, 0.7)', // Green for completed
+backgroundColor: 'rgba(34, 197, 94, 0.7)',
 borderColor: 'rgba(22, 163, 74, 1)',
 borderWidth: 1,
 barThickness: 18,
 barPercentage: 0.7,
 categoryPercentage: 0.9,
 borderRadius: 0,
-// Removed 'stack' property here for grouped bars
+stack: 'combined', // Give 'Completed' its own stack
 },
 
-// This map creates the grouped breakdown bars
 ...breakdownFields.map((key, i) => ({
-label: key,
-data: breakdownData[key] || [],
+label: key, // Label will be 'Functional', 'Calibration', 'Accuracy', 'NIC', 'FinalTest'
+data: breakdownData[key] || [], // Data comes from breakdownData[key]
 backgroundColor: colors[i],
 borderColor: colors[i],
 borderWidth: 1,
@@ -518,15 +539,12 @@ barThickness: 18,
 barPercentage: 0.7,
 categoryPercentage: 0.9,
 borderRadius: 0,
-// Removed 'stack' property here for grouped bars
+stack: 'breakdown', // Stack breakdown bars on a separate stack
 })),
-// ... Lines (unchanged)
 
-
-// Tracking Line (on top of completed)
 {
 label: 'Tracking Line',
-data: completedData, // This line will typically follow the 'Completed' bar
+data: completedData,
 borderColor: 'rgba(59, 130, 246, 1)',
 backgroundColor: 'transparent',
 borderWidth: 2,
@@ -534,13 +552,11 @@ pointRadius: 3,
 tension: 0.3,
 type: 'line',
 yAxisID: 'y',
-// Lines typically don't have a stack property if they are overlaid
 },
 
-// Threshold Line
 {
 label: 'Threshold',
-data: Array(completedData.length).fill(redLineValue), // A flat line at the threshold value
+data: Array(completedData.length).fill(redLineValue),
 borderColor: 'rgba(239, 68, 68, 1)',
 borderWidth: 2,
 borderDash: [5, 5],
@@ -548,7 +564,6 @@ pointRadius: 0,
 fill: false,
 type: 'line',
 yAxisID: 'y',
-// Lines typically don't have a stack property if they are overlaid
 },
 ];
 
@@ -1034,7 +1049,7 @@ intersect: false,
 },
 scales: {
 x: {
-stacked: false, // <<--- KEY CHANGE: Set to false for grouped bars
+stacked: true, // Set to true to stack breakdown bars
 ticks: {
 autoSkip: false,
 font: { family: 'Poppins', size: 12 },
@@ -1042,7 +1057,13 @@ font: { family: 'Poppins', size: 12 },
 grid: { display: false },
 },
 y: {
-// ...
+beginAtZero: true,
+suggestedMax: redLineValue + 500,
+ticks: {
+stepSize: 200,
+font: { family: 'Poppins' },
+},
+grid: { drawBorder: false },
 },
 },
 }}
@@ -1135,11 +1156,11 @@ First Yield & {getDailyReportTitle()}
 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-center">
 <div className="bg-white border rounded p-4 shadow">
 <div className="text-sm text-gray-600">Passed</div>
-<div className="text-xl font-bold text-green-600">{firstFieldPieData.datasets[0].data?.[0]?.toFixed(0) ?? 0}</div>
+<div className="text-xl font-bold text-green-600">{data?.firstFieldReport?.passed ?? 0}</div>
 </div>
 <div className="bg-white border rounded p-4 shadow">
 <div className="text-sm text-gray-600">Failed</div>
-<div className="text-xl font-bold text-red-500">{firstFieldPieData.datasets[0].data?.[1]?.toFixed(0) ?? 0}</div>
+<div className="text-xl font-bold text-red-500">{data?.firstFieldReport?.failed ?? 0}</div>
 </div>
 </div>
 </div>
