@@ -904,8 +904,8 @@ className={`w-4 h-3 rounded-sm ${color} ${border || ''
 <div className="relative flex flex-col sm:flex-row justify-center items-center gap-2 mb-4">
 <h3 className="text-base sm:text-lg font-semibold text-primary text-center sm:text-left">
 {['Present Week', 'Previous Week'].includes(selectedRange)
-? 'Weekly Progress & Breakdown: '
-: 'Hourly Progress & Breakdown: '}
+? 'Weekly Progress: '
+: 'Hourly Progress: '}
 <span className="inline-block text-primary break-words text-sm sm:text-base">
 [Completed, Functional, Calibration & Accuracy, NIC, FinalTest]
 </span>
@@ -1005,8 +1005,42 @@ grid: { drawBorder: false },
 </div>
 </section>
 
+<section className='bg-white rounded-2xl shadow-lg p-6 mt-6 font-poppins'>
+{/* 🔢 Total Summary Breakdown Section */}
+<motion.div>
+<h3 className="text-2xl font-semibold text-primary text-center mb-8">Total Summary</h3>
+
+<div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4 text-center justify-center">
+{/* ✅ Completed */}
+<div className="bg-white shadow rounded-lg p-4 border border-gray-200">
+<div className="text-sm font-medium text-gray-600">Completed</div>
+<div className="text-xl font-bold text-green-600">
+{
+filteredHourlyDetails.reduce((sum, item) =>
+sum + breakdownFields.reduce((sub, key) => sub + (item[key] || 0), 0)
+, 0)
+}
+</div>
+</div>
+
+{/* 🔁 Other Breakdown Fields */}
+{breakdownFields.map((field, index) => {
+const total = filteredHourlyDetails.reduce((sum, item) => sum + (item[field] || 0), 0);
+const color = colors[index];
+return (
+<div key={field} className="bg-white shadow rounded-lg p-4 border border-gray-200">
+<div className="text-sm font-medium text-gray-600">{field}</div>
+<div className="text-xl font-bold" style={{ color }}>{total}</div>
+</div>
+);
+})}
+</div>
+</motion.div>
+
+</section>
+
 <section className="bg-white rounded-2xl shadow-lg p-6 mt-6 font-poppins">
-<h2 className="text-2xl font-bold text-center text-primary mb-8">Yield & Daily Reports</h2>
+<h2 className="text-2xl font-bold text-center text-primary mb-8">First Yield & {getDailyReportTitle()}</h2>
 
 <motion.div
 key={`dualPie-${refreshKey}`}
@@ -1039,40 +1073,7 @@ className="grid grid-cols-1 md:grid-cols-2 gap-6"
 <section className="bg-white rounded-2xl shadow-lg p-6 mt-6 font-poppins">
 
 {/* 🔢 Total Summary Breakdown Section */}
-<motion.div>
-<h3 className="text-2xl font-semibold text-primary text-center mb-8">Total Summary</h3>
 
-<div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4 text-center justify-center">
-{/* ✅ Completed */}
-<div className="bg-white shadow rounded-lg p-4 border border-gray-200">
-<div className="text-sm font-medium text-gray-600">Completed</div>
-<div className="text-xl font-bold text-green-600">
-{
-// For total summary, sum completed data from the current range
-['Present Week', 'Previous Week'].includes(selectedRange) ?
-data?.[selectedRange === 'Present Week' ? 'presentWeek' : 'previousWeek']?.completed || 0 :
-data?.[selectedRange === 'Day' ? 'presentDay' : 'previousDay']?.completed || 0
-}
-</div>
-</div>
-
-{/* 🔁 Other Breakdown Fields */}
-{breakdownFields.map((field, index) => {
-// Map 'FinalTest' field to 'finalInit' key in data
-const dataKey = field === 'FinalTest' ? 'finalInit' : field.toLowerCase();
-const total = ['Present Week', 'Previous Week'].includes(selectedRange) ?
-data?.[selectedRange === 'Present Week' ? 'presentWeek' : 'previousWeek']?.[dataKey] || 0 :
-filteredHourlyDetails.reduce((sum, item) => sum + (item[field] || 0), 0);
-const color = colors[index];
-return (
-<div key={field} className="bg-white shadow rounded-lg p-4 border border-gray-200">
-<div className="text-sm font-medium text-gray-600">{field}</div>
-<div className="text-xl font-bold" style={{ color }}>{total}</div>
-</div>
-);
-})}
-</div>
-</motion.div>
 
 {/* 📊 Total Summary Pie Chart Section */}
 <motion.div>
