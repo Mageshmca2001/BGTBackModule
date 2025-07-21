@@ -924,7 +924,12 @@ grid: { drawBorder: false },
 </div>
 </div>
 </motion.div>
+</div>
+</section>
 
+
+<section className='bg-white rounded-2xl shadow-lg p-6 mt-6 font-poppins'>
+{/* 🔢 Total Summary Breakdown Section */}
 <motion.div>
 <h3 className="text-2xl font-semibold text-primary text-center mb-8">Total Summary</h3>
 
@@ -954,10 +959,9 @@ return (
 })}
 </div>
 </motion.div>
-</div>
-
 
 </section>
+
 
 <section className="bg-white rounded-2xl shadow-lg p-6 mt-6 font-poppins">
 <h2 className="text-2xl font-bold text-center text-primary mb-8">First Yield & {getDailyReportTitle()}</h2>
@@ -1026,7 +1030,7 @@ return (
 
 {/* 📊 Total Summary Pie Chart Section */}
 <motion.div>
-<h3 className="text-2xl font-semibold text-primary text-center mt-12 mb-8">Total Summary Pie Chart</h3>
+<h3 className="text-2xl font-semibold text-primary text-center mt-12 mb-4">Total Summary Pie Chart</h3>
 
 {/* 🟢 First Yield Report Totals */}
 <div className="mb-6">
