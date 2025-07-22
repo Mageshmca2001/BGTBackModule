@@ -240,6 +240,8 @@ const presentWeekJson = await presentWeekRes.json();
 const previousWeekJson = previousWeekRes.ok ? await previousWeekRes.json() : null;
 const hourlyJson = await hourlyRes.json();
 
+
+// Data assignment
 const dailyData = countJson.data;
 const rawPresentWeekData = presentWeekJson.data.currentWeek;
 const rawPreviousWeekData = previousWeekJson?.data?.previousWeek || {
@@ -251,6 +253,7 @@ Final: []
 };
 
 const testTypes = ['Functional', 'Calibration', 'Accuracy', 'NIC', 'FinalTest'];
+
 const hours = [
 '06:00','07:00','08:00','09:00','10:00','11:00','12:00','13:00',
 '14:00','15:00','16:00','17:00','18:00','19:00','20:00','21:00',
@@ -258,46 +261,43 @@ const hours = [
 '6.00'
 ];
 
-// ✅ DECLARE hourlyMap BEFORE using it
-const hourlyMap = {};
-const hourlyMapPrevious = {};
+const getTotalCount = (map, time, testType) =>
+map[time]?.[testType]?.total || 0;
 
+const getPassCount = (map, time, testType) =>
+map[time]?.[testType]?.pass || 0;
+
+const processHourlyData = (rawData) => {
+const map = {};
 testTypes.forEach(testType => {
-const data = hourlyJson.data[testType] || [];
-
+const data = rawData[testType] || [];
 data.forEach(entry => {
-const [start] = entry.TimeSlot.split('-');
-if (!hourlyMap[start]) hourlyMap[start] = {};
-if (!hourlyMap[start][testType]) {
-hourlyMap[start][testType] = { total: 0, pass: 0 };
-}
+const [start] = entry.TimeSlot?.split('-') || [];
+if (!start) return;
 
-// ✅ FIX: Set values from API
+if (!map[start]) map[start] = {};
+if (!map[start][testType]) map[start][testType] = { total: 0, pass: 0 };
+
 if (entry.Status === 'Total') {
-hourlyMap[start][testType].total = entry.MeterCount || 0;
+map[start][testType].total = entry.MeterCount || 0;
 } else if (entry.Status === 'PASS') {
-hourlyMap[start][testType].pass = entry.MeterCount || 0;
+map[start][testType].pass = entry.MeterCount || 0;
 }
 });
 });
-
-// ✅ Utility functions
-const getTotalCount = (hourlyMap, time, testType) => {
-return hourlyMap[time]?.[testType]?.total || 0;
+return map;
 };
 
-const getPassCount = (hourlyMap, time, testType) => {
-return hourlyMap[time]?.[testType]?.pass || 0;
-};
-
-// ✅ Build hourly details
-const hourlyDetails = hours.map(time => {
+const buildHourlyDetails = (map) => {
+return hours.map(time => {
 const totals = {};
 let completedSum = 0;
 
 testTypes.forEach(testType => {
-totals[testType] = getTotalCount(hourlyMap, time, testType);
-completedSum += getPassCount(hourlyMap, time, testType);
+const total = getTotalCount(map, time, testType);
+const pass = getPassCount(map, time, testType);
+totals[testType] = total;
+completedSum += pass;
 });
 
 return {
@@ -306,17 +306,39 @@ time,
 completed: completedSum
 };
 });
+};
 
 
+
+
+// ✅ MAIN EXECUTION (replace `hourlyJson` with your actual API response)
+// Converts raw API format to usable map format
+const hourlyMapCurrent = processHourlyData(hourlyJson.data?.current?.fullData || {});
+const hourlyMapPrevious = processHourlyData(hourlyJson.data?.previous?.fullData || {});
+
+const hourlyDetailsCurrent = buildHourlyDetails(hourlyMapCurrent);
+const hourlyDetailsPrevious = buildHourlyDetails(hourlyMapPrevious);
+
+
+
+
+// ✅ You can now use these values in state or dashboard cards
+console.log('Hourly Details (Present):', hourlyDetailsCurrent);
+console.log('Hourly Details (Previous):', hourlyDetailsPrevious);
+
+
+// Compute weekly date ranges
 const today = new Date();
 const startOfPresentWeek = new Date(today);
 startOfPresentWeek.setDate(today.getDate() - today.getDay());
 const startOfPreviousWeek = new Date(startOfPresentWeek);
 startOfPreviousWeek.setDate(startOfPresentWeek.getDate() - 7);
 
+// Extract shifts
 const presentShiftCards = extractShiftData(dailyData.today);
 const previousShiftCards = extractShiftData(dailyData.yesterday);
 
+// Prepare final structured result
 const result = {
 presentDay: {
 ...calculateDayTotalsFromShifts(presentShiftCards),
@@ -324,6 +346,8 @@ shift1: presentShiftCards[0],
 shift2: presentShiftCards[1],
 shift3: presentShiftCards[2],
 shiftCards: presentShiftCards,
+
+
 },
 previousDay: {
 ...calculateDayTotalsFromShifts(previousShiftCards),
@@ -331,10 +355,19 @@ shift1: previousShiftCards[0],
 shift2: previousShiftCards[1],
 shift3: previousShiftCards[2],
 shiftCards: previousShiftCards,
+
+
 },
+
+
 presentWeek: extractWeeklyData(rawPresentWeekData, startOfPresentWeek),
 previousWeek: extractWeeklyData(rawPreviousWeekData, startOfPreviousWeek),
-hourlyDetails
+
+hourlyDetails:{
+current: hourlyDetailsCurrent,
+previous: hourlyDetailsPrevious
+},
+
 };
 
 setData(result);
@@ -369,33 +402,37 @@ cleanupFns.current.forEach(fn => fn());
 };
 }, []);
 
-
-
 const filteredHourlyDetails = useMemo(() => {
 if (!data?.hourlyDetails) return [];
 
-if (selectedRange !== 'Day' || selectedShift === 'All') return data.hourlyDetails;
+let hourlyData = [];
 
+if (selectedRange === 'Day') {
+hourlyData = data.hourlyDetails.current || [];
+} else if (selectedRange === 'Previous Day') {
+hourlyData = data.hourlyDetails.previous || [];
+} else {
+return []; // only apply filtering for day-based views
+}
+
+if (selectedShift === 'All') return hourlyData;
+
+// Shift 1: 06:00 - <14:00
 if (selectedShift === 'Shift1') {
-// 06:00 to 13:00 → index 0 to 7 (inclusive of 06:00–13:00)
-return data.hourlyDetails.filter(item =>
-item.time >= '06:00' && item.time < '14:00'
-);
-}
-if (selectedShift === 'Shift2') {
-// 14:00 to 21:00
-return data.hourlyDetails.filter(item =>
-item.time >= '14:00' && item.time < '22:00'
-);
-}
-if (selectedShift === 'Shift3') {
-// 22:00 to 05:00 (wraps around midnight)
-return data.hourlyDetails.filter(item =>
-item.time >= '22:00' || item.time < '06:00'
-);
+return hourlyData.filter(item => item.time >= '06:00' && item.time < '14:00');
 }
 
-return data.hourlyDetails;
+// Shift 2: 14:00 - <22:00
+if (selectedShift === 'Shift2') {
+return hourlyData.filter(item => item.time >= '14:00' && item.time < '22:00');
+}
+
+// Shift 3: 22:00 - <06:00 (wraps around midnight)
+if (selectedShift === 'Shift3') {
+return hourlyData.filter(item => item.time >= '22:00' || item.time < '06:00');
+}
+
+return hourlyData;
 }, [data, selectedRange, selectedShift]);
 
 
@@ -425,8 +462,10 @@ Shift2: { start: '14:00', end: '22:00' },
 Shift3: { start: '22:00', end: '06:00' },
 };
 
+// Utility: Check if time is in selected shift
 const isTimeInShift = (time, shift) => {
 if (shift === 'All') return true;
+
 const [hour, minute] = time.split(':').map(Number);
 const timeInMinutes = hour * 60 + minute;
 
@@ -439,10 +478,11 @@ const endInMinutes = endHour * 60 + endMinute;
 if (startInMinutes < endInMinutes) {
 return timeInMinutes >= startInMinutes && timeInMinutes < endInMinutes;
 } else {
-// Shift spans across midnight
+// Wraps around midnight
 return timeInMinutes >= startInMinutes || timeInMinutes < endInMinutes;
 }
 };
+
 const labels = ['Present Week', 'Previous Week'].includes(selectedRange)
 ? (
 data?.[selectedRange === 'Present Week' ? 'presentWeek' : 'previousWeek']
@@ -475,74 +515,47 @@ return `${current} - ${next}`;
 })();
 
 
-
-const completedData = ['Present Week', 'Previous Week'].includes(selectedRange)
-? data?.[selectedRange === 'Present Week' ? 'presentWeek' : 'previousWeek']
+const completedData =
+['Present Week', 'Previous Week'].includes(selectedRange)
+? (
+data?.[selectedRange === 'Present Week' ? 'presentWeek' : 'previousWeek']
 ?.dailyCompleted?.map((d) => d.value) || []
-: ['Present Day', 'Previous Day'].includes(selectedRange)
-? [data?.[selectedRange === 'Present Day' ? 'presentDay' : 'previousDay']?.completed || 0]
+)
 : filteredHourlyDetails
-.filter((item) => isTimeInShift(item.time, selectedShift))
-.map((item) => item.completed || 0); // ✅ This line uses correct PASS count
-
-
-// const sumWeekData = (dailyCompleted = []) => {
-// const summary = {
-// completed: {},
-// };
-
-// breakdownFields.forEach((field) => {
-// summary[field] = 0;
-// summary.completed[field] = 0;
-// });
-
-// dailyCompleted.forEach((day) => {
-// breakdownFields.forEach((field) => {
-// summary[field] += day[field.toLowerCase()] || 0;
-// summary.completed[field] += day[field.toLowerCase()] || 0; // assuming same structure
-// });
-// });
-
-// return summary;
-// };
+.filter(item => isTimeInShift(item.time, selectedShift))
+.map(item => item.completed || 0);
 
 
 // Enhanced breakdown data for weekly view and hourly view
 
-const breakdownData = ['Present Week', 'Previous Week'].includes(selectedRange)
+const breakdownData =
+['Present Week', 'Previous Week'].includes(selectedRange)
 ? (() => {
 const weekData =
 data?.[selectedRange === 'Present Week' ? 'presentWeek' : 'previousWeek'];
-
 if (!weekData?.dailyCompleted) return {};
 
 return {
-Functional: weekData.dailyCompleted.map((day) => day.functional || 0),
-Calibration: weekData.dailyCompleted.map((day) => day.calibration || 0),
-Accuracy: weekData.dailyCompleted.map((day) => day.accuracy || 0),
-NIC: weekData.dailyCompleted.map((day) => day.nic || 0),
-FinalTest: weekData.dailyCompleted.map((day) => day.finalInit || 0),
+Functional: weekData.dailyCompleted.map((d) => d.functional || 0),
+Calibration: weekData.dailyCompleted.map((d) => d.calibration || 0),
+Accuracy: weekData.dailyCompleted.map((d) => d.accuracy || 0),
+NIC: weekData.dailyCompleted.map((d) => d.nic || 0),
+FinalTest: weekData.dailyCompleted.map((d) => d.finalInit || 0),
 };
 })()
-: ['Present Day', 'Previous Day'].includes(selectedRange)
-? (() => {
-const dayData =
-data?.[selectedRange === 'Present Day' ? 'presentDay' : 'previousDay'];
+: (() => {
+const shiftFiltered = filteredHourlyDetails.filter(item =>
+isTimeInShift(item.time, selectedShift)
+);
 
 return {
-Functional: [dayData?.Functional || 0],
-Calibration: [dayData?.Calibration || 0],
-Accuracy: [dayData?.Accuracy || 0],
-NIC: [dayData?.NIC || 0],
-FinalTest: [dayData?.FinalTest || 0],
+Functional: shiftFiltered.map((item) => item.Functional || 0),
+Calibration: shiftFiltered.map((item) => item.Calibration || 0),
+Accuracy: shiftFiltered.map((item) => item.Accuracy || 0),
+NIC: shiftFiltered.map((item) => item.NIC || 0),
+FinalTest: shiftFiltered.map((item) => item.FinalTest || 0),
 };
-})()
-: breakdownFields.reduce((acc, key) => {
-acc[key] = filteredHourlyDetails
-.filter((item) => isTimeInShift(item.time, selectedShift))
-.map((item) => item[key] || 0);
-return acc;
-}, {});
+})();
 
 
 const colors = ['#3B82F6', '#F59E0B', '#10B981', '#EF4444', '#8B5CF6'];
@@ -573,6 +586,7 @@ barPercentage: 0.7,
 categoryPercentage: 0.9,
 borderRadius: 0,
 })),
+
 
 // Tracking line
 {
@@ -801,6 +815,14 @@ const filteredDatasets = useMemo(() => {
 return datasets.filter((ds) => visibleDatasets[ds.label] !== false);
 }, [datasets, visibleDatasets]);
 
+const fieldKeyMap = {
+Functional: 'functional',
+Calibration: 'calibration',
+Accuracy: 'accuracy',
+NIC: 'nic',
+FinalTest: 'finalInit', // Use your backend's correct key
+};
+
 // Error or Loading
 if (loading) return <LoadingDots />;
 if (error) return <div className="text-center text-red-600 mt-10 font-semibold font-poppins">Error: {error}</div>;
@@ -1013,12 +1035,12 @@ className={`w-4 h-3 rounded-sm ${color} ${border || ''
 </span>
 </h3>
 
-{selectedRange === 'Day' && (
+{(selectedRange === 'Day' || selectedRange === 'Previous Day') && (
 <div className="sm:absolute sm:right-0 w-full sm:w-auto">
 <select
 value={selectedShift}
 onChange={(e) => setSelectedShift(e.target.value)}
-className="border border-gray-300 rounded px-3 py-2 text-sm bg-white  text-primary shadow w-full sm:w-auto"
+className="border border-gray-300 rounded px-3 py-2 text-sm bg-white text-primary shadow w-full sm:w-auto"
 >
 <option value="All">All Shifts</option>
 <option value="Shift1">06:00 - 14:00</option>
@@ -1027,6 +1049,7 @@ className="border border-gray-300 rounded px-3 py-2 text-sm bg-white  text-prima
 </select>
 </div>
 )}
+
 </div>
 
 <motion.div
@@ -1108,41 +1131,52 @@ grid: { drawBorder: false },
 </section>
 
 
+
+
 <section className='bg-white rounded-2xl shadow-lg p-6 mt-6 font-poppins'>
-  <motion.div>
-    <h3 className="text-2xl font-semibold text-primary text-center mb-8">
-      Total Summary
-    </h3>
+<motion.div>
+<h3 className="text-2xl font-semibold text-primary text-center mb-8">
+Total Summary
+</h3>
 
-    <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4 text-center justify-center">
-      
-      {/* ✅ Completed = sum of all testType PASS counts */}
-      <div className="bg-white shadow rounded-lg p-4 border border-gray-200">
-        <div className="text-sm font-medium text-gray-600">Completed</div>
-        <div className="text-xl font-bold text-green-600">
-          {
-            filteredHourlyDetails.reduce((sum, item) => sum + (item.completed || 0), 0)
-          }
-        </div>
-      </div>
+<div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4 text-center justify-center">
 
-      {/* 🔁 Functional to FinalTest (total meters per testType) */}
-      {breakdownFields.map((field, index) => {
-        const total = filteredHourlyDetails.reduce(
-          (sum, item) => sum + (item[field] || 0),
-          0
-        );
-        return (
-          <div key={field} className="bg-white shadow rounded-lg p-4 border border-gray-200">
-            <div className="text-sm font-medium text-gray-600">{field}</div>
-            <div className="text-xl font-bold" style={{ color: colors[index] }}>{total}</div>
-          </div>
-        );
-      })}
-    </div>
-  </motion.div>
+{/* ✅ Completed Total */}
+<div className="bg-white shadow rounded-lg p-4 border border-gray-200">
+<div className="text-sm font-medium text-gray-600">Completed</div>
+<div className="text-xl font-bold text-green-600">
+{['Present Week', 'Previous Week'].includes(selectedRange)
+? (
+  data?.[selectedRange === 'Present Week' ? 'presentWeek' : 'previousWeek']
+    ?.dailyCompleted?.reduce((sum, day) => sum + (day.value || 0), 0) || 0
+)
+: filteredHourlyDetails.reduce((sum, item) => sum + (item.completed || 0), 0)}
+</div>
+</div>
+
+{/* ✅ Functional to FinalTest Totals */}
+{breakdownFields.map((field, index) => {
+const backendKey = fieldKeyMap[field];
+
+const total = ['Present Week', 'Previous Week'].includes(selectedRange)
+? (
+data?.[selectedRange === 'Present Week' ? 'presentWeek' : 'previousWeek']
+  ?.dailyCompleted?.reduce((sum, day) => sum + (day[backendKey] || 0), 0) || 0
+)
+: (
+filteredHourlyDetails.reduce((sum, item) => sum + (item[field] || 0), 0)
+);
+
+return (
+<div key={field} className="bg-white shadow rounded-lg p-4 border border-gray-200">
+<div className="text-sm font-medium text-gray-600">{field}</div>
+<div className="text-xl font-bold" style={{ color: colors[index] }}>{total}</div>
+</div>
+);
+})}
+</div>
+</motion.div>
 </section>
-
 
 
 
