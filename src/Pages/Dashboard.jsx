@@ -548,20 +548,20 @@ return acc;
 const colors = ['#3B82F6', '#F59E0B', '#10B981', '#EF4444', '#8B5CF6'];
 
 const datasets = [
+// Static 'Completed' dataset
 {
 label: 'Completed',
 data: completedData,
-backgroundColor: 'rgba(34, 197, 94, 0.7)', // Green for completed
+backgroundColor: 'rgba(34, 197, 94, 0.7)', // Green
 borderColor: 'rgba(22, 163, 74, 1)',
 borderWidth: 1,
 barThickness: 18,
 barPercentage: 0.7,
-categoryPercentage: 0.9,
+categoryPercentage: 0.9,   // controls spacing between bars in the same group
 borderRadius: 0,
-// Removed 'stack' property here for grouped bars
 },
 
-// This map creates the grouped breakdown bars
+// Dynamically mapped breakdown bars
 ...breakdownFields.map((key, i) => ({
 label: key,
 data: breakdownData[key] || [],
@@ -572,39 +572,33 @@ barThickness: 18,
 barPercentage: 0.7,
 categoryPercentage: 0.9,
 borderRadius: 0,
-// Removed 'stack' property here for grouped bars
 })),
-// ... Lines (unchanged)
 
-
-// Tracking Line (on top of completed)
+// Tracking line
 {
 label: 'Tracking Line',
-data: completedData, // This line will typically follow the 'Completed' bar
-borderColor: 'rgba(59, 130, 246, 1)',
+data: completedData,
+borderColor: 'rgba(59, 130, 246, 1)', // Blue
 backgroundColor: 'transparent',
 borderWidth: 2,
 pointRadius: 3,
 tension: 0.3,
 type: 'line',
-yAxisID: 'y',
-// Lines typically don't have a stack property if they are overlaid
 },
 
-// Threshold Line
+// Threshold line
 {
 label: 'Threshold',
-data: Array(completedData.length).fill(redLineValue), // A flat line at the threshold value
-borderColor: 'rgba(239, 68, 68, 1)',
+data: Array(completedData.length).fill(redLineValue),
+borderColor: 'rgba(239, 68, 68, 1)', // Red
 borderWidth: 2,
 borderDash: [5, 5],
 pointRadius: 0,
 fill: false,
 type: 'line',
-yAxisID: 'y',
-// Lines typically don't have a stack property if they are overlaid
 },
 ];
+
 
 const firstFieldPieData = useMemo(() => {
 let report = { passed: 0, failed: 0 };
@@ -1088,7 +1082,7 @@ intersect: false,
 },
 scales: {
 x: {
-stacked: false, // <<--- KEY CHANGE: Set to false for grouped bars
+stacked: false,
 ticks: {
 autoSkip: false,
 font: { family: 'Poppins', size: 12 },
@@ -1096,7 +1090,13 @@ font: { family: 'Poppins', size: 12 },
 grid: { display: false },
 },
 y: {
-// ...
+beginAtZero: true,
+suggestedMax: redLineValue + 500,
+ticks: {
+stepSize: 200,
+font: { family: 'Poppins' },
+},
+grid: { drawBorder: false },
 },
 },
 }}
