@@ -372,38 +372,30 @@ cleanupFns.current.forEach(fn => fn());
 
 
 const filteredHourlyDetails = useMemo(() => {
-  if (!data?.hourlyDetails) return [];
+if (!data?.hourlyDetails) return [];
 
-  const allDetails = data.hourlyDetails;
+if (selectedRange !== 'Day' || selectedShift === 'All') return data.hourlyDetails;
 
-  // If not filtering by shift or not 'Day', return all
-  if (selectedRange !== 'Day' || selectedShift === 'All') return allDetails;
+if (selectedShift === 'Shift1') {
+// 06:00 to 13:00 → index 0 to 7 (inclusive of 06:00–13:00)
+return data.hourlyDetails.filter(item =>
+item.time >= '06:00' && item.time < '14:00'
+);
+}
+if (selectedShift === 'Shift2') {
+// 14:00 to 21:00
+return data.hourlyDetails.filter(item =>
+item.time >= '14:00' && item.time < '22:00'
+);
+}
+if (selectedShift === 'Shift3') {
+// 22:00 to 05:00 (wraps around midnight)
+return data.hourlyDetails.filter(item =>
+item.time >= '22:00' || item.time < '06:00'
+);
+}
 
-  const timeToMinutes = (timeStr) => {
-    const [h, m] = timeStr.split(':').map(Number);
-    return h * 60 + m;
-  };
-
-  return allDetails.filter(item => {
-    const mins = timeToMinutes(item.time);
-
-    if (selectedShift === 'Shift1') {
-      // 06:00 to 13:59 → 360 to 839 mins
-      return mins >= 360 && mins < 840;
-    }
-
-    if (selectedShift === 'Shift2') {
-      // 14:00 to 21:59 → 840 to 1319 mins
-      return mins >= 840 && mins < 1320;
-    }
-
-    if (selectedShift === 'Shift3') {
-      // 22:00 to 05:59 → 1320 to 1439 OR 0 to 359
-      return mins >= 1320 || mins < 360;
-    }
-
-    return true;
-  });
+return data.hourlyDetails;
 }, [data, selectedRange, selectedShift]);
 
 
