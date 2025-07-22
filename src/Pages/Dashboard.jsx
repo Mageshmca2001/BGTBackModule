@@ -169,6 +169,8 @@ dailyCompleted // This now holds correctly calculated daily totals, completed, a
 };
 
 
+
+
 const calculateDayTotalsFromShifts = (shiftCards) => {
 return shiftCards.reduce(
 (acc, shift) => {
@@ -193,8 +195,6 @@ finalInit: 0,
 );
 };
 
-
-
 const Dashboard = () => {
 const [data, setData] = useState(null);
 const [loading, setLoading] = useState(true);
@@ -218,170 +218,194 @@ return () => clearInterval(interval);
 }, []);
 
 useEffect(() => {
-  const cleanupFns = { current: [] };
+const cleanupFns = { current: [] };
 
 const fetchData = async () => {
 try {
 setLastUpdated(new Date());
 
-// Fetch daily count data
-const countRes = await fetch(`${API_BASE}/user/count`);
-if (!countRes.ok) throw new Error("Failed to fetch counts");
-const countJson = await countRes.json();
-const dailyData = countJson.data;
+// Fetch all required APIs in parallel
+const [countRes, presentWeekRes, previousWeekRes, hourlyRes] = await Promise.all([
+fetch(`${API_BASE}/user/count`),
+fetch(`${API_BASE}/user/week`),
+fetch(`${API_BASE}/user/week?previous=true`),
+fetch(`${API_BASE}/user/hourly`),
+]);
 
-// Setup weekly date references
+if (!countRes.ok || !presentWeekRes.ok || !hourlyRes.ok)
+throw new Error("Failed to fetch one or more datasets");
+
+const countJson = await countRes.json();
+const presentWeekJson = await presentWeekRes.json();
+const previousWeekJson = previousWeekRes.ok ? await previousWeekRes.json() : null;
+const hourlyJson = await hourlyRes.json();
+
+const dailyData = countJson.data;
+const rawPresentWeekData = presentWeekJson.data.currentWeek;
+const rawPreviousWeekData = previousWeekJson?.data?.previousWeek || {
+Functional: [],
+Calibration: [],
+Accuracy: [],
+NIC: [],
+Final: []
+};
+
+const testTypes = ['Functional', 'Calibration', 'Accuracy', 'NIC', 'FinalTest'];
+const hours = [
+'06:00','07:00','08:00','09:00','10:00','11:00','12:00','13:00',
+'14:00','15:00','16:00','17:00','18:00','19:00','20:00','21:00',
+'22:00','23:00','00:00','01:00','02:00','03:00','04:00','05:00',
+'6.00'
+];
+
+// ✅ DECLARE hourlyMap BEFORE using it
+const hourlyMap = {};
+const hourlyMapPrevious = {};
+
+testTypes.forEach(testType => {
+const data = hourlyJson.data[testType] || [];
+
+data.forEach(entry => {
+const [start] = entry.TimeSlot.split('-');
+if (!hourlyMap[start]) hourlyMap[start] = {};
+if (!hourlyMap[start][testType]) {
+hourlyMap[start][testType] = { total: 0, pass: 0 };
+}
+
+// ✅ FIX: Set values from API
+if (entry.Status === 'Total') {
+hourlyMap[start][testType].total = entry.MeterCount || 0;
+} else if (entry.Status === 'PASS') {
+hourlyMap[start][testType].pass = entry.MeterCount || 0;
+}
+});
+});
+
+// ✅ Utility functions
+const getTotalCount = (hourlyMap, time, testType) => {
+return hourlyMap[time]?.[testType]?.total || 0;
+};
+
+const getPassCount = (hourlyMap, time, testType) => {
+return hourlyMap[time]?.[testType]?.pass || 0;
+};
+
+// ✅ Build hourly details
+const hourlyDetails = hours.map(time => {
+const totals = {};
+let completedSum = 0;
+
+testTypes.forEach(testType => {
+totals[testType] = getTotalCount(hourlyMap, time, testType);
+completedSum += getPassCount(hourlyMap, time, testType);
+});
+
+return {
+time,
+...totals,
+completed: completedSum
+};
+});
+
+
 const today = new Date();
 const startOfPresentWeek = new Date(today);
 startOfPresentWeek.setDate(today.getDate() - today.getDay());
-
 const startOfPreviousWeek = new Date(startOfPresentWeek);
 startOfPreviousWeek.setDate(startOfPresentWeek.getDate() - 7);
-
-// Fetch present week data
-const presentWeekRes = await fetch(`${API_BASE}/user/week`);
-if (!presentWeekRes.ok) throw new Error("Failed to fetch present week data");
-const presentWeekJson = await presentWeekRes.json();
-const rawPresentWeekData = presentWeekJson.data.currentWeek;
-
-// Fetch previous week data
-const previousWeekRes = await fetch(`${API_BASE}/user/week?previous=true`);
-let rawPreviousWeekData = {};
-if (previousWeekRes.ok) {
-const previousWeekJson = await previousWeekRes.json();
-rawPreviousWeekData = previousWeekJson.data.previousWeek;
-} else {
-console.warn("Previous week data not available or endpoint needs adjustment.");
-rawPreviousWeekData = {
-    Functional: [],
-    Calibration: [],
-    Accuracy: [],
-    NIC: [],
-    Final: []
-};
-}
-
-// Fetch /user/hourly and transform into required format
-const hourlyRes = await fetch(`${API_BASE}/user/hourly`);
-if (!hourlyRes.ok) throw new Error("Failed to fetch hourly data");
-const hourlyJson = await hourlyRes.json();
-
-const rawHourly = hourlyJson.data?.hourlyList || [];
-
-const hourlyMap = {};
-
-for (const category in rawHourly) {
-rawHourly[category]?.forEach(entry => {
-    const time = entry.TimeSlot;
-    const status = entry.Status;
-    const count = entry.MeterCount;
-
-    if (!time || !status) return;
-
-    if (!hourlyMap[time]) {
-    hourlyMap[time] = { time };
-    }
-
-    if (status === "Total") {
-    hourlyMap[time][category] = count;
-    }
-
-    if (status === "Pass") {
-    hourlyMap[time][`${category}_Pass`] = count;
-    }
-});
-}
-
-const hourlyDetails = Object.values(hourlyMap).sort((a, b) => {
-// Optional: Sort by time (24h)
-const t1 = a.time;
-const t2 = b.time;
-return t1.localeCompare(t2);
-});
 
 const presentShiftCards = extractShiftData(dailyData.today);
 const previousShiftCards = extractShiftData(dailyData.yesterday);
 
-const presentWeekProcessed = extractWeeklyData(rawPresentWeekData, startOfPresentWeek);
-const previousWeekProcessed = extractWeeklyData(rawPreviousWeekData, startOfPreviousWeek);
-
 const result = {
 presentDay: {
-    ...calculateDayTotalsFromShifts(presentShiftCards),
-    shift1: presentShiftCards[0],
-    shift2: presentShiftCards[1],
-    shift3: presentShiftCards[2],
-    shiftCards: presentShiftCards,
+...calculateDayTotalsFromShifts(presentShiftCards),
+shift1: presentShiftCards[0],
+shift2: presentShiftCards[1],
+shift3: presentShiftCards[2],
+shiftCards: presentShiftCards,
 },
 previousDay: {
-    ...calculateDayTotalsFromShifts(previousShiftCards),
-    shift1: previousShiftCards[0],
-    shift2: previousShiftCards[1],
-    shift3: previousShiftCards[2],
-    shiftCards: previousShiftCards,
+...calculateDayTotalsFromShifts(previousShiftCards),
+shift1: previousShiftCards[0],
+shift2: previousShiftCards[1],
+shift3: previousShiftCards[2],
+shiftCards: previousShiftCards,
 },
-presentWeek: presentWeekProcessed,
-previousWeek: previousWeekProcessed,
-hourlyDetails // ✅ Now in desired format
+presentWeek: extractWeeklyData(rawPresentWeekData, startOfPresentWeek),
+previousWeek: extractWeeklyData(rawPreviousWeekData, startOfPreviousWeek),
+hourlyDetails
 };
 
 setData(result);
 setRefreshKey(prev => prev + 1);
 setError(null);
 } catch (err) {
-setError(err.message);
 console.error('Fetch error:', err);
+setError(err.message);
 } finally {
 setLoading(false);
 }
 };
 
-  fetchData(); // Initial fetch
+fetchData();
 
-  const now = new Date();
-  const delayToNext5Min =
-    (5 - (now.getMinutes() % 5)) * 60 * 1000 -
-    now.getSeconds() * 1000 -
-    now.getMilliseconds();
+const now = new Date();
+const delayToNext5Min =
+(5 - (now.getMinutes() % 5)) * 60 * 1000 -
+now.getSeconds() * 1000 -
+now.getMilliseconds();
 
-  const timeoutId = setTimeout(() => {
-    fetchData();
-    const intervalId = setInterval(fetchData, 5 * 60 * 1000); // every 5 minutes
-    cleanupFns.current.push(() => clearInterval(intervalId));
-  }, delayToNext5Min);
+const timeoutId = setTimeout(() => {
+fetchData();
+const intervalId = setInterval(fetchData, 5 * 60 * 1000);
+cleanupFns.current.push(() => clearInterval(intervalId));
+}, delayToNext5Min);
 
-  cleanupFns.current.push(() => clearTimeout(timeoutId));
+cleanupFns.current.push(() => clearTimeout(timeoutId));
 
-  return () => {
-    cleanupFns.current.forEach(fn => fn());
-  };
+return () => {
+cleanupFns.current.forEach(fn => fn());
+};
 }, []);
 
 
+
 const filteredHourlyDetails = useMemo(() => {
-if (!data?.hourlyDetails) return [];
+  if (!data?.hourlyDetails) return [];
 
-if (selectedRange !== 'Day' || selectedShift === 'All') return data.hourlyDetails;
+  const allDetails = data.hourlyDetails;
 
-if (selectedShift === 'Shift1') {
-return data.hourlyDetails.slice(0, 8); // 06:00 to 13:00
-} else if (selectedShift === 'Shift2') {
-return data.hourlyDetails.slice(8, 16); // 14:00 to 21:00
-} else if (selectedShift === 'Shift3') {
-// Shift 3 (22:00-06:00) spans two days. Assuming hourlyDetails covers a 24-hour cycle.
-// This might need more robust handling if hourlyDetails is strictly for "today".
-const firstPart = data.hourlyDetails.filter(item => {
-const hour = parseInt(item.time.split(':')[0]);
-return hour >= 22;
-});
-const secondPart = data.hourlyDetails.filter(item => {
-const hour = parseInt(item.time.split(':')[0]);
-return hour < 6;
-});
-return [...firstPart, ...secondPart];
-}
-return data.hourlyDetails;
+  // If not filtering by shift or not 'Day', return all
+  if (selectedRange !== 'Day' || selectedShift === 'All') return allDetails;
+
+  const timeToMinutes = (timeStr) => {
+    const [h, m] = timeStr.split(':').map(Number);
+    return h * 60 + m;
+  };
+
+  return allDetails.filter(item => {
+    const mins = timeToMinutes(item.time);
+
+    if (selectedShift === 'Shift1') {
+      // 06:00 to 13:59 → 360 to 839 mins
+      return mins >= 360 && mins < 840;
+    }
+
+    if (selectedShift === 'Shift2') {
+      // 14:00 to 21:59 → 840 to 1319 mins
+      return mins >= 840 && mins < 1320;
+    }
+
+    if (selectedShift === 'Shift3') {
+      // 22:00 to 05:59 → 1320 to 1439 OR 0 to 359
+      return mins >= 1320 || mins < 360;
+    }
+
+    return true;
+  });
 }, [data, selectedRange, selectedShift]);
+
 
 // This array defines the breakdown fields for both chart and summary.
 // Ensure 'FinalTest' is used here to match what you want to display for Final.
@@ -401,6 +425,7 @@ default:
 return 'Daily Reports';
 }
 };
+
 
 const shiftTimes = {
 Shift1: { start: '06:00', end: '14:00' },
@@ -426,7 +451,6 @@ return timeInMinutes >= startInMinutes && timeInMinutes < endInMinutes;
 return timeInMinutes >= startInMinutes || timeInMinutes < endInMinutes;
 }
 };
-
 const labels = ['Present Week', 'Previous Week'].includes(selectedRange)
 ? (
 data?.[selectedRange === 'Present Week' ? 'presentWeek' : 'previousWeek']
@@ -458,17 +482,41 @@ return `${current} - ${next}`;
 }).filter(Boolean);
 })();
 
+
+
 const completedData = ['Present Week', 'Previous Week'].includes(selectedRange)
-? data?.[selectedRange === 'Present Week' ? 'presentWeek' : 'previousWeek']?.dailyCompleted?.map((d) => d.value) || [] // Use 'value' as completed meters for the day
+? data?.[selectedRange === 'Present Week' ? 'presentWeek' : 'previousWeek']
+?.dailyCompleted?.map((d) => d.value) || []
+: ['Present Day', 'Previous Day'].includes(selectedRange)
+? [data?.[selectedRange === 'Present Day' ? 'presentDay' : 'previousDay']?.completed || 0]
 : filteredHourlyDetails
 .filter((item) => isTimeInShift(item.time, selectedShift))
-.map((item) =>
-Object.values(item)
-.filter((v) => typeof v === 'number' && !isNaN(v))
-.reduce((a, b) => a + b, 0)
-);
+.map((item) => item.completed || 0); // ✅ This line uses correct PASS count
+
+
+// const sumWeekData = (dailyCompleted = []) => {
+// const summary = {
+// completed: {},
+// };
+
+// breakdownFields.forEach((field) => {
+// summary[field] = 0;
+// summary.completed[field] = 0;
+// });
+
+// dailyCompleted.forEach((day) => {
+// breakdownFields.forEach((field) => {
+// summary[field] += day[field.toLowerCase()] || 0;
+// summary.completed[field] += day[field.toLowerCase()] || 0; // assuming same structure
+// });
+// });
+
+// return summary;
+// };
+
 
 // Enhanced breakdown data for weekly view and hourly view
+
 const breakdownData = ['Present Week', 'Previous Week'].includes(selectedRange)
 ? (() => {
 const weekData =
@@ -477,19 +525,33 @@ data?.[selectedRange === 'Present Week' ? 'presentWeek' : 'previousWeek'];
 if (!weekData?.dailyCompleted) return {};
 
 return {
-Functional: weekData.dailyCompleted.map(day => day.functional || 0),
-Calibration: weekData.dailyCompleted.map(day => day.calibration || 0),
-Accuracy: weekData.dailyCompleted.map(day => day.accuracy || 0),
-NIC: weekData.dailyCompleted.map(day => day.nic || 0),
-FinalTest: weekData.dailyCompleted.map(day => day.finalInit || 0), // Use finalInit here, correctly maps to "FinalTest" label
+Functional: weekData.dailyCompleted.map((day) => day.functional || 0),
+Calibration: weekData.dailyCompleted.map((day) => day.calibration || 0),
+Accuracy: weekData.dailyCompleted.map((day) => day.accuracy || 0),
+NIC: weekData.dailyCompleted.map((day) => day.nic || 0),
+FinalTest: weekData.dailyCompleted.map((day) => day.finalInit || 0),
+};
+})()
+: ['Present Day', 'Previous Day'].includes(selectedRange)
+? (() => {
+const dayData =
+data?.[selectedRange === 'Present Day' ? 'presentDay' : 'previousDay'];
+
+return {
+Functional: [dayData?.Functional || 0],
+Calibration: [dayData?.Calibration || 0],
+Accuracy: [dayData?.Accuracy || 0],
+NIC: [dayData?.NIC || 0],
+FinalTest: [dayData?.FinalTest || 0],
 };
 })()
 : breakdownFields.reduce((acc, key) => {
 acc[key] = filteredHourlyDetails
 .filter((item) => isTimeInShift(item.time, selectedShift))
-.map((item) => item[key]);
+.map((item) => item[key] || 0);
 return acc;
 }, {});
+
 
 const colors = ['#3B82F6', '#F59E0B', '#10B981', '#EF4444', '#8B5CF6'];
 
@@ -1053,39 +1115,45 @@ y: {
 </div>
 </section>
 
+
 <section className='bg-white rounded-2xl shadow-lg p-6 mt-6 font-poppins'>
-{/* 🔢 Total Summary Breakdown Section */}
-<motion.div>
-<h3 className="text-2xl font-semibold text-primary text-center mb-8">Total Summary</h3>
+  <motion.div>
+    <h3 className="text-2xl font-semibold text-primary text-center mb-8">
+      Total Summary
+    </h3>
 
-<div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4 text-center justify-center">
-{/* ✅ Completed */}
-<div className="bg-white shadow rounded-lg p-4 border border-gray-200">
-<div className="text-sm font-medium text-gray-600">Completed</div>
-<div className="text-xl font-bold text-green-600">
-{
-filteredHourlyDetails.reduce((sum, item) =>
-sum + breakdownFields.reduce((sub, key) => sub + (item[key] || 0), 0)
-, 0)
-}
-</div>
-</div>
+    <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4 text-center justify-center">
+      
+      {/* ✅ Completed = sum of all testType PASS counts */}
+      <div className="bg-white shadow rounded-lg p-4 border border-gray-200">
+        <div className="text-sm font-medium text-gray-600">Completed</div>
+        <div className="text-xl font-bold text-green-600">
+          {
+            filteredHourlyDetails.reduce((sum, item) => sum + (item.completed || 0), 0)
+          }
+        </div>
+      </div>
 
-{/* 🔁 Other Breakdown Fields */}
-{breakdownFields.map((field, index) => {
-const total = filteredHourlyDetails.reduce((sum, item) => sum + (item[field] || 0), 0);
-const color = colors[index];
-return (
-<div key={field} className="bg-white shadow rounded-lg p-4 border border-gray-200">
-<div className="text-sm font-medium text-gray-600">{field}</div>
-<div className="text-xl font-bold" style={{ color }}>{total}</div>
-</div>
-);
-})}
-</div>
-</motion.div>
-
+      {/* 🔁 Functional to FinalTest (total meters per testType) */}
+      {breakdownFields.map((field, index) => {
+        const total = filteredHourlyDetails.reduce(
+          (sum, item) => sum + (item[field] || 0),
+          0
+        );
+        return (
+          <div key={field} className="bg-white shadow rounded-lg p-4 border border-gray-200">
+            <div className="text-sm font-medium text-gray-600">{field}</div>
+            <div className="text-xl font-bold" style={{ color: colors[index] }}>{total}</div>
+          </div>
+        );
+      })}
+    </div>
+  </motion.div>
 </section>
+
+
+
+
 
 <section className="bg-white rounded-2xl shadow-lg p-6 mt-6 font-poppins">
 <h2 className="text-2xl font-bold text-center text-primary mb-8">First Yield & {getDailyReportTitle()}</h2>
