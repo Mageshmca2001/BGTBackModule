@@ -1,12 +1,12 @@
 // import UserSidebar from "../components/userRoutes";
 
-// import Production from "../Report-pages/Production";
+// import TableViewer from "../components/Tester";
 
 // const UserProduction = () => {
 
 // return (
 // <UserSidebar>
-// <Production />
+// <TableViewer />
 // </UserSidebar>
 // );
 // };

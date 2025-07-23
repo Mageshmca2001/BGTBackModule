@@ -14,7 +14,8 @@ import AdMeterReports from "./Adminboard/MeterReport";
 import Userinfo from "./Adminboard/User";
 import AdTestjig from "./Adminboard/TestJig";
 import AdProduction from "./Adminboard/BGTProduction";
-// import UserProduction from "./Usersboard/BGTProduction";
+import AdTestDC from "./Adminboard/Tableviewer";
+
 
 const App = () => {
 return (
@@ -31,6 +32,7 @@ return (
 <Route path="/user" element={<Userinfo />} />
 <Route path="/testJig" element={<AdTestjig />} />
 <Route path="/group" element={<AdProduction />} />
+<Route path="/test2" element={<AdTestDC/>}/>
 </Route>
 
 <Route element={<ProtectedRoute allowedRoles={['user','linehead','testingengineer']} />}>
@@ -38,7 +40,7 @@ return (
 <Route path="/userpages/Daily" element={<UserDailyReports />} />
 <Route path="/userpages/Monthly" element={<UserMonReports />} />
 <Route path="/userpages/Meter" element={<UserMeterReports />} />
-{/* <Route path="/group1" element={<UserProduction />} /> */}
+{/* <Route path="/test" element={<UserProduction />} /> */}
 </Route>
 </Routes>
 </BrowserRouter>

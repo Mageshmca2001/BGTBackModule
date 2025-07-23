@@ -193,13 +193,13 @@ className="flex items-center p-2 text-gray-800 rounded-lg hover:bg-white"
 {/* Users */}
 {/* <li>
 <Link
-to="/group1"
+to="/test"
 className="flex items-center p-3 text-white rounded-lg hover:bg-gray-200 group"
 >
 <i className="bx bx-group text-xl text-white group-hover:text-black flex-shrink-0"></i>
 {isOpen && (
 <span className="nav-text ml-3 text-white group-hover:text-black font-['Poppins'] truncate">
-Production Lines
+Tester DC
 </span>
 )}
 </Link>
@@ -211,6 +211,7 @@ Production Lines
 Configuration
 </li>
 )} */}
+
 
 </ul>
 </div>
