@@ -1,10 +1,13 @@
 // DailyReports.jsx
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef,useMemo  } from 'react';
 import axios from 'axios';
 import ExcelJS from 'exceljs';
 import { saveAs } from 'file-saver';
 import Chart from 'chart.js/auto';
 import { format, subDays } from 'date-fns';
+
+
+const API_BASE = import.meta.env.VITE_API;
 
 const DailyReports = () => {
 useEffect(() => {
@@ -27,6 +30,7 @@ const isExportDisabled = filteredData.length === 0;
 const chartRef = useRef(null);
 const chartInstanceRef = useRef(null);
 
+// ⏰ Clock update every second
 useEffect(() => {
 const interval = setInterval(() => setDateTime(new Date()), 1000);
 return () => clearInterval(interval);
@@ -39,6 +43,7 @@ year: 'numeric',
 });
 const formattedTime = dateTime.toLocaleTimeString();
 
+// 📅 Summary label for report heading
 const getDaySummary = () => {
 const today = new Date();
 const previousDay = subDays(today, 1);
@@ -58,14 +63,25 @@ return '';
 
 const daySummary = getDaySummary();
 
-const totalTested = filteredData.reduce((acc, item) => acc + (parseInt(item.tested) || 0), 0);
-const totalCompleted = filteredData.reduce((acc, item) => acc + (parseInt(item.completed) || 0), 0);
-const totalReworked = filteredData.reduce((acc, item) => acc + (parseInt(item.reworked) || 0), 0);
+// 📊 Totals at the top
+const totalTested = filteredData.reduce((sum, item) => sum + (parseInt(item.tested) || 0), 0);
+const totalCompleted = filteredData.reduce((sum, item) => sum + (parseInt(item.completed) || 0), 0);
+const totalReworked = filteredData.reduce((sum, item) => sum + (parseInt(item.reworked) || 0), 0);
 
+// 🔢 Pagination logic
 const totalPages = Math.ceil(filteredData.length / itemsPerPage);
+const paginatedData = useMemo(() => {
+const start = (currentPage - 1) * itemsPerPage;
+const end = start + itemsPerPage;
+return filteredData.slice(start, end);
+}, [filteredData, currentPage, itemsPerPage]);
 
-const handleSelectDayChange = (event) => setSelectedDay(event.target.value);
+// 🗓️ Dropdown handler
+const handleSelectDayChange = (event) => {
+setSelectedDay(event.target.value);
+};
 
+// 🔢 Entries per page
 const handleEntriesChange = (event) => {
 const value = event.target.value;
 setEntries(value);
@@ -79,16 +95,29 @@ setItemsPerPage(filteredData.length);
 }
 }, [entries, filteredData]);
 
+// 🔍 Search filter
 const handleSearchChange = (event) => {
-const searchValue = event.target.value.toLowerCase();
-setSearch(searchValue);
+const value = event.target.value.toLowerCase();
+setSearch(value);
 
-const filtered = originalData.filter((item) =>
-item.hours.toLowerCase().includes(searchValue) ||
-item.tested.toString().includes(searchValue) ||
-item.completed.toString().includes(searchValue) ||
-item.reworked.toString().includes(searchValue)
+const filtered = originalData.filter((item) => {
+return (
+item.hours.toLowerCase().includes(value) ||
+item.functional?.toString().includes(value) ||
+item.functionalCompleted?.toString().includes(value) ||
+item.calibration?.toString().includes(value) ||
+item.calibrationCompleted?.toString().includes(value) ||
+item.accuracy?.toString().includes(value) ||
+item.accuracyCompleted?.toString().includes(value) ||
+item.nic?.toString().includes(value) ||
+item.nicCompleted?.toString().includes(value) ||
+item.finalInit?.toString().includes(value) ||
+item.finalInitCompleted?.toString().includes(value) ||
+item.tested?.toString().includes(value) ||
+item.completed?.toString().includes(value) ||
+item.reworked?.toString().includes(value)
 );
+});
 
 setFilteredData(filtered);
 setCurrentPage(1);
@@ -103,199 +132,303 @@ return;
 
 try {
 setLoading(true);
-const response = await axios.get("https://frontend-1-lunu.onrender.com/admin");
-const fetchedData = response.data;
-let filteredByDay;
+const res = await axios.get(`${API_BASE}/user/hourly`);
+const apiData = res.data;
 
-const today = new Date();
-const todayStr = format(today, 'yyyy-MM-dd');
-const previousDay = subDays(today, 1);
-const previousDayStr = format(previousDay, 'yyyy-MM-dd');
-const fromDate = subDays(today, 7);
-const monthStart = startOfMonth(today);
-const monthEnd = endOfMonth(today);
+const rawData =
+selectedDay === '01'
+? apiData?.data?.current?.fullData
+: apiData?.data?.previous?.fullData;
 
-if (selectedDay === "01") {
-filteredByDay = fetchedData.filter((item) => {
-const itemDate = new Date(item.date);
-return format(itemDate, 'yyyy-MM-dd') === todayStr;
-});
-} else if (selectedDay === "02") {
-filteredByDay = fetchedData.filter((item) => {
-const itemDate = new Date(item.date);
-return format(itemDate, 'yyyy-MM-dd') === previousDayStr;
-});
-} else if (selectedDay === "03") {
-filteredByDay = fetchedData.filter((item) => {
-const itemDate = new Date(item.date);
-return itemDate >= fromDate && itemDate <= previousDay;
-});
-} else if (selectedDay === "04") {
-filteredByDay = fetchedData.filter((item) => {
-const itemDate = new Date(item.date);
-return itemDate >= monthStart && itemDate <= monthEnd;
-});
-} else {
-filteredByDay = [];
-}
-
-// 🚨 Check if no data found
-if (filteredByDay.length === 0) {
+if (!rawData || Object.keys(rawData).length === 0) {
 setModalMessage('⚠️ No data found for the selected period.');
 setShowModal(true);
+setOriginalData([]);
+setFilteredData([]);
+return;
 }
 
-setOriginalData(filteredByDay);
-setFilteredData(filteredByDay);
-setCurrentPage(1);
+const testTypes = ['Functional', 'Calibration', 'Accuracy', 'NIC', 'FinalTest'];
+const hourLabels = [
+'06:00', '07:00', '08:00', '09:00', '10:00', '11:00',
+'12:00', '13:00', '14:00', '15:00', '16:00', '17:00',
+'18:00', '19:00', '20:00', '21:00', '22:00', '23:00',
+'00:00', '01:00', '02:00', '03:00', '04:00', '05:00'
+];
 
-} catch (error) {
-console.error("Error fetching report data:", error);
-setModalMessage('❌  Error fetching data. Please check your network or try again.');
+const hourlyMap = {};
+for (const type of testTypes) {
+(rawData?.[type] || []).forEach(entry => {
+const [hour] = entry.TimeSlot?.split('-') || [];
+if (!hour) return;
+
+if (!hourlyMap[hour]) {
+hourlyMap[hour] = {
+hours: hour,
+functional: 0, functionalCompleted: 0,
+calibration: 0, calibrationCompleted: 0,
+accuracy: 0, accuracyCompleted: 0,
+nic: 0, nicCompleted: 0,
+finalInit: 0, finalInitCompleted: 0,
+tested: 0,
+completed: 0,
+reworked: 0
+};
+}
+
+const target = {
+Functional: 'functional',
+Calibration: 'calibration',
+Accuracy: 'accuracy',
+NIC: 'nic',
+FinalTest: 'finalInit'
+}[type];
+
+if (entry.Status === 'Total') {
+hourlyMap[hour][target] += entry.MeterCount || 0;
+hourlyMap[hour].tested += entry.MeterCount || 0;
+} else if (entry.Status === 'PASS') {
+hourlyMap[hour][`${target}Completed`] += entry.MeterCount || 0;
+hourlyMap[hour].completed += entry.MeterCount || 0;
+} else if (entry.Status === 'REWORK') {
+hourlyMap[hour].reworked += entry.MeterCount || 0;
+}
+});
+}
+
+const formatted = hourLabels.map(hour => hourlyMap[hour] || {
+hours: hour,
+functional: 0, functionalCompleted: 0,
+calibration: 0, calibrationCompleted: 0,
+accuracy: 0, accuracyCompleted: 0,
+nic: 0, nicCompleted: 0,
+finalInit: 0, finalInitCompleted: 0,
+tested: 0,
+completed: 0,
+reworked: 0
+});
+
+setOriginalData(formatted);
+setFilteredData(formatted);
+setCurrentPage(1);
+} catch (err) {
+console.error("Hourly API fetch failed:", err);
+setModalMessage('❌ Failed to fetch hourly report. Please try again later.');
 setShowModal(true);
 } finally {
 setLoading(false);
 }
 };
-
-
 const handleExport = async () => {
 setLoading(true);
 try {
 const workbook = new ExcelJS.Workbook();
-const worksheet = workbook.addWorksheet('DailyReports');
+const worksheet = workbook.addWorksheet('Hourly Report');
 
-const header = ['Hours', 'Tested', 'Completed', 'Reworked'];
-const headerRow = worksheet.addRow(header);
-headerRow.font = { bold: true };
-headerRow.alignment = { vertical: 'middle', horizontal: 'center' };
-
-worksheet.columns = [
-{ width: 18 },
-{ width: 12 },
-{ width: 12 },
-{ width: 12 },
+const header = [
+'Hour', 'Functional', 'Functional Completed',
+'Calibration', 'Calibration Completed',
+'Accuracy', 'Accuracy Completed',
+'NIC', 'NIC Completed',
+'Final Test', 'Final Completed',
+'Total Tested', 'Completed', 'Reworked'
 ];
+worksheet.addRow(header).font = { bold: true };
 
 filteredData.forEach(item => {
-const row = worksheet.addRow([
-item.hours || '',
-item.tested || 0,
-item.completed || 0,
-item.reworked || 0,
+worksheet.addRow([
+item.hours,
+item.functional,
+item.functionalCompleted,
+item.calibration,
+item.calibrationCompleted,
+item.accuracy,
+item.accuracyCompleted,
+item.nic,
+item.nicCompleted,
+item.finalInit,
+item.finalInitCompleted,
+item.tested,
+item.completed,
+item.reworked
 ]);
-row.alignment = { vertical: 'middle', horizontal: 'center' };
-});
-
-const summaryStart = filteredData.length + 3;
-worksheet.getCell(`A${summaryStart}`).value = 'Total Summary';
-worksheet.getCell(`A${summaryStart}`).font = { bold: true, size: 12 };
-
-const summaryRows = [
-['Total Tested', totalTested],
-['Total Completed', totalCompleted],
-['Total Reworked', totalReworked]
-];
-
-summaryRows.forEach(([label, value]) => {
-const row = worksheet.addRow([label, value]);
-row.alignment = { vertical: 'middle', horizontal: 'center' };
 });
 
 const buffer = await workbook.xlsx.writeBuffer();
 const blob = new Blob([buffer], { type: 'application/octet-stream' });
-saveAs(blob, 'DailyReports.xlsx');
+saveAs(blob, `Hourly_Report_${formattedDate}.xlsx`);
 } catch (err) {
-console.error('❌ Excel export error:', err);
+console.error("Export failed:", err);
 } finally {
 setLoading(false);
 }
 };
 
+
 const handlePageChange = (pageNumber) => setCurrentPage(pageNumber);
 
-const paginatedData = filteredData.slice(
-(currentPage - 1) * itemsPerPage,
-currentPage * itemsPerPage
-);
 
 useEffect(() => {
 if (!chartRef.current || filteredData.length === 0) return;
 
 const ctx = chartRef.current.getContext('2d');
+
 if (chartInstanceRef.current) {
 chartInstanceRef.current.destroy();
 }
 
-const labels = filteredData.map(item => item.hours);
-const tested = filteredData.map(item => item.tested);
-const completed = filteredData.map(item => item.completed);
-const reworked = filteredData.map(item => item.reworked);
+const pageData = paginatedData;
+const completedData = pageData.map(item => item.completed); // Tracking line source
 
 chartInstanceRef.current = new Chart(ctx, {
 type: 'bar',
 data: {
-labels,
+labels: pageData.map(item => item.hours),
 datasets: [
 {
-label: 'Meters Tested',
-data: tested,
-backgroundColor: '#a78bfa',
-borderColor: '#7c3aed',
-borderWidth: 1
+label: 'Functional',
+data: pageData.map(item => item.functional),
+backgroundColor: '#3B82F6',
 },
 {
-label: 'Meters Completed',
-data: completed,
-backgroundColor: '#34d399',
-borderColor: '#10b981',
-borderWidth: 1
+label: 'Calibration',
+data: pageData.map(item => item.calibration),
+backgroundColor: '#F59E0B',
 },
 {
-label: 'Meters Reworked',
-data: reworked,
-backgroundColor: '#f472b6',
-borderColor: '#db2777',
-borderWidth: 1
-}
-]
+label: 'Accuracy',
+data: pageData.map(item => item.accuracy),
+backgroundColor: '#10B981',
+},
+{
+label: 'NIC',
+data: pageData.map(item => item.nic),
+backgroundColor: '#EF4444',
+},
+{
+label: 'Final Test',
+data: pageData.map(item => item.finalInit),
+backgroundColor: '#8B5CF6',
+},
+{
+label: 'Total Tested',
+data: pageData.map(item => item.tested),
+backgroundColor: '#005c99ff',
+},
+{
+label: 'Total Completed',
+data: pageData.map(item => item.completed),
+backgroundColor: 'rgba(34, 197, 94, 0.7)',
+},
+{
+label: 'Total Reworked',
+data: pageData.map(item => item.reworked),
+backgroundColor: '#ff0000ff',
+},
+{
+// ✅ Tracking Line Dataset
+label: 'Tracking Line',
+data: completedData,
+type: 'line',
+borderColor: 'rgba(59, 130, 246, 1)',
+backgroundColor: 'transparent',
+borderWidth: 2,
+pointRadius: 3,
+tension: 0.3,
+order: 0,
+datalabels: {
+display: false,
+},
+skipLegend: true, // Custom flag to filter legend
+},
+],
 },
 options: {
 responsive: true,
 maintainAspectRatio: false,
 plugins: {
-legend: { position: 'top' },
-title: {
+legend: {
 display: true,
-text: 'Meter Testing Analysis by Hours',
-color: '#334155',
-font: { size: 18, weight: 'bold', family: 'Poppins' },
-padding: { top: 10, bottom: 10 }
+labels: {
+font: {
+    family: 'Poppins',
+    size: 12,
 },
-datalabels: { display: false }
+filter: (legendItem) => legendItem.text !== 'Tracking Line', // ✅ Hide from legend
+},
+},
+tooltip: {
+enabled: true,
+mode: 'index',
+intersect: false,
+callbacks: {
+label: function (context) {
+const label = context.dataset.label || '';
+const value = context.parsed.y;
+if (label === 'Tracking Line') return null; // ✅ Hide from tooltip
+return `${label}: ${value}`;
+},
+},
+titleFont: {
+family: 'Poppins',
+size: 14,
+weight: 'bold',
+},
+bodyFont: {
+family: 'Poppins',
+size: 13,
+},
+backgroundColor: 'rgba(255, 255, 255, 0.95)',
+titleColor: '#111827',
+bodyColor: '#1F2937',
+borderColor: '#E5E7EB',
+borderWidth: 1,
+padding: 10,
+cornerRadius: 8,
+boxPadding: 4,
+},
+datalabels: {
+display: false,
+},
+},
+interaction: {
+mode: 'index',
+intersect: false,
 },
 scales: {
+x: {
+stacked: false,
+ticks: {
+autoSkip: false,
+font: {
+    family: 'Poppins',
+    size: 12,
+},
+},
+grid: {
+display: false,
+},
+},
 y: {
 beginAtZero: true,
-title: {
-display: true,
-text: 'Number of Meters',
-color: '#4b5563'
-}
+suggestedMax: 1000,
+ticks: {
+stepSize: 200,
+font: {
+    family: 'Poppins',
 },
-x: {
-title: {
-display: true,
-text: 'Hours',
-color: '#4b5563'
 },
-stacked: false,
-grid: { display: false }
-}
-}
-}
+grid: {
+drawBorder: false,
+},
+},
+},
+},
 });
-}, [filteredData]);
+}, [paginatedData]);
+
+
+
 
 return (
 <>
@@ -328,13 +461,12 @@ onChange={handleSelectDayChange}
 <option value="" disabled>Select Day</option>
 <option value="01">Present Day</option>
 <option value="02">Previous Day</option>
-<option value="03">Last 7 Days</option>
 </select>
 <input
 type="text"
 readOnly
 value={daySummary}
-placeholder="Selected date summary"
+placeholder="Select Date"
 className="bg-white text-primary font-[poppins] border rounded p-2 w-full sm:w-60"
 />
 </div>
@@ -445,6 +577,7 @@ paginatedData.map((item, index) => (
 <td className="border text-center font-[poppins] px-4 py-2">{item.accuracy}</td>
 <td className="border text-center font-[poppins] px-4 py-2">{item.nic}</td>
 <td className="border text-center font-[poppins] px-4 py-2">{item.finalInit}</td>
+<td className='boreder text-center font-[poppins] px-4 py-2'>{item.tested}</td>
 <td className="border text-center font-[poppins] px-4 py-2">{item.completed}</td>
 <td className="border text-center font-[poppins] px-4 py-2">{item.reworked}</td>
 
@@ -505,26 +638,6 @@ Next
 <div className="mt-4">
 <h2 className="text-xl font-bold text-primary font-[poppins] mb-2">Total Summary</h2>
 <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-center font-[poppins]">
-<div className="bg-purple-100 text-purple-800 p-4 rounded shadow">
-<p className="text-lg">Total FunctionalTest</p>
-<p className="text-2xl font-bold mt-0">{totalTested}</p>
-</div>
-<div className="bg-purple-100 text-purple-800 p-4 rounded shadow">
-<p className="text-lg">Total CalibrationTest</p>
-<p className="text-2xl font-bold mt-0">{totalTested}</p>
-</div>
-<div className="bg-purple-100 text-purple-800 p-4 rounded shadow">
-<p className="text-lg">Total AccuracyTest</p>
-<p className="text-2xl font-bold mt-0">{totalTested}</p>
-</div>
-<div className="bg-purple-100 text-purple-800 p-4 rounded shadow">
-<p className="text-lg">Total NICCOMTest</p>
-<p className="text-2xl font-bold mt-0">{totalTested}</p>
-</div>
-<div className="bg-purple-100 text-purple-800 p-4 rounded shadow">
-<p className="text-lg">Total FinalTest</p>
-<p className="text-2xl font-bold mt-0">{totalTested}</p>
-</div>
 <div className="bg-purple-100 text-purple-800 p-4 rounded shadow">
 <p className="text-lg">Total Tested</p>
 <p className="text-2xl font-bold mt-0">{totalTested}</p>
