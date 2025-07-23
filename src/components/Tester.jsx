@@ -4,6 +4,11 @@ import axios from 'axios';
 const API_BASE = import.meta.env.VITE_API;
 
 const TableViewer = () => {
+useEffect(() => {
+document.title = 'BGT - Tableview';
+}, []);
+
+
 const [tableList, setTableList] = useState([]);
 const [selectedTable, setSelectedTable] = useState('');
 const [fromDate, setFromDate] = useState('');
@@ -11,6 +16,10 @@ const [toDate, setToDate] = useState('');
 const [tableData, setTableData] = useState([]);
 const [loading, setLoading] = useState(false);
 const [modalMessage, setModalMessage] = useState('');
+
+
+
+
 
 const fetchTableList = async () => {
 try {
@@ -122,7 +131,7 @@ Fetch Table
 )}
 
 {!loading && tableData.length > 0 && (
-<div className="bg-white p-4 rounded shadow-md overflow-x-auto overflow-y-auto max-h-[70vh]">
+<div className="bg-white p-4 rounded shadow-md overflow-x-auto w-full max-h-[70vh]">
 <h2 className="text-lg font-bold mb-3 text-primary font-[poppins]">
 Table: {selectedTable}
 </h2>

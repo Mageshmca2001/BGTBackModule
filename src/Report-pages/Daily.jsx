@@ -440,9 +440,14 @@ No data available for the selected day or search.
 paginatedData.map((item, index) => (
 <tr key={index}>
 <td className="border text-center font-[poppins] px-4 py-2">{item.hours}</td>
-<td className="border text-center font-[poppins] px-4 py-2">{item.tested}</td>
+<td className="border text-center font-[poppins] px-4 py-2">{item.functional}</td>
+<td className="border text-center font-[poppins] px-4 py-2">{item.calibration}</td>
+<td className="border text-center font-[poppins] px-4 py-2">{item.accuracy}</td>
+<td className="border text-center font-[poppins] px-4 py-2">{item.nic}</td>
+<td className="border text-center font-[poppins] px-4 py-2">{item.finalInit}</td>
 <td className="border text-center font-[poppins] px-4 py-2">{item.completed}</td>
 <td className="border text-center font-[poppins] px-4 py-2">{item.reworked}</td>
+
 </tr>
 ))
 )}
