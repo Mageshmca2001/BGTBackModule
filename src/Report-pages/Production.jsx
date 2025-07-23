@@ -19,7 +19,7 @@ const [matchedCalibration, setMatchedCalibration] = useState(null);
 const isExportDisabled = !finalMatchedParameters;
 
 useEffect(() => {
-document.title = 'BGT - Meter Report';
+document.title = 'BGT - Production';
 
 if (!maintenanceMode) {
 const fetchData = async () => {
