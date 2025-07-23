@@ -218,7 +218,7 @@ return () => clearInterval(interval);
 }, []);
 
 useEffect(() => {
-const cleanupFns = { current: [] };
+
 
 const fetchData = async () => {
 try {
@@ -390,14 +390,18 @@ now.getSeconds() * 1000 -
 now.getMilliseconds();
 
 const timeoutId = setTimeout(() => {
-fetchData();
-const intervalId = setInterval(fetchData, 5 * 60 * 1000);
+fetchData(); // align first update
+const intervalId = setInterval(fetchData, 5 * 60 * 1000); // 🔁 Every 5 min after that
+
+// Store on cleanup
 cleanupFns.current.push(() => clearInterval(intervalId));
 }, delayToNext5Min);
 
-cleanupFns.current.push(() => clearTimeout(timeoutId));
+const cleanupFns = { current: [] }; // track all timers for clean unmount
 
+// ⛔ Cleanup on unmount
 return () => {
+clearTimeout(timeoutId);
 cleanupFns.current.forEach(fn => fn());
 };
 }, []);
@@ -1193,12 +1197,33 @@ className="grid grid-cols-1 md:grid-cols-2 gap-6"
 >
 
 {/* First Yield Report Box */}
-<div className="bg-gray-50 rounded-xl shadow p-6 flex flex-col items-center">
+<div className="bg-gray-50 rounded-xl shadow p-6 flex flex-col sm:flex-row-reverse items-center sm:items-center gap-6">
+
+{/* Pie Chart on Right with Heading Inside */}
+<div className="flex flex-col items-center w-[280px]">
 <h3 className="text-lg font-semibold text-primary mb-4">First Yield Report</h3>
 <div className="relative w-[280px] h-[280px]">
 <Pie data={firstFieldPieData} options={firstFieldPieOptions} plugins={[ChartDataLabels]} />
 </div>
 </div>
+
+{/* Total Tested on Left */}
+<div className="flex-1 w-full sm:w-auto">
+<div className="grid grid-cols gap-4 text-center">
+<div className="bg-white border rounded px-2 p-4 shadow">
+<div className="text-sm text-gray-600">Total Tested</div>
+<div className="text-xl font-bold text-blue-600">
+{((
+(firstFieldPieData.datasets[0].data?.[0] ?? 0) +
+(firstFieldPieData.datasets[0].data?.[1] ?? 0)
+).toFixed(0))}
+</div>
+</div>
+</div>
+</div>
+</div>
+
+
 
 {/* Daily Report Box */}
 <div className="bg-gray-50 rounded-xl shadow p-6 flex flex-col items-center">
@@ -1226,17 +1251,36 @@ className="grid grid-cols-1 md:grid-cols-2 gap-6"
 <h2 className="text-base4 font-bold text-left text-primary mb-6">
 First Yield & {getDailyReportTitle()}
 </h2>
-<div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-center">
+<div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-center">
+{/* Passed */}
 <div className="bg-white border rounded p-4 shadow">
 <div className="text-sm text-gray-600">Passed</div>
-<div className="text-xl font-bold text-green-600">{firstFieldPieData.datasets[0].data?.[0]?.toFixed(0) ?? 0}</div>
+<div className="text-xl font-bold text-green-600">
+{firstFieldPieData.datasets[0].data?.[0]?.toFixed(0) ?? 0}
 </div>
+</div>
+
+{/* Failed */}
 <div className="bg-white border rounded p-4 shadow">
 <div className="text-sm text-gray-600">Failed</div>
-<div className="text-xl font-bold text-red-500">{firstFieldPieData.datasets[0].data?.[1]?.toFixed(0) ?? 0}</div>
+<div className="text-xl font-bold text-red-500">
+{firstFieldPieData.datasets[0].data?.[1]?.toFixed(0) ?? 0}
+</div>
+</div>
+
+{/* Total Tested */}
+<div className="bg-white border rounded p-4 shadow">
+<div className="text-sm text-gray-600">Total Tested</div>
+<div className="text-xl font-bold text-blue-600">
+{((
+(firstFieldPieData.datasets[0].data?.[0] ?? 0) +
+(firstFieldPieData.datasets[0].data?.[1] ?? 0)
+).toFixed(0))}
 </div>
 </div>
 </div>
+</div>
+
 
 {/* 🔵 Daily Report Totals */}
 <div className="mb-6">
