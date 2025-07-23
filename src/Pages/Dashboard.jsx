@@ -14,7 +14,7 @@ Tooltip,
 Legend
 } from 'chart.js';
 import { motion, AnimatePresence } from 'framer-motion';
-import ChatBot from './chatbot';
+// import ChatBot from './chatbot';
 import StarCard from '../components/StarCard';
 import StartCard1 from '../components/StartCardTotal'; // Assuming StartCard1 is for overall week/day total
 
@@ -1312,8 +1312,6 @@ First Yield & {getDailyReportTitle()}
 </motion.div>
 </section>
 
-
-<ChatBot />
 </main>
 </>
 );
