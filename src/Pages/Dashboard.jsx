@@ -58,12 +58,17 @@ ease: 'easeOut'
 }
 };
 
-const extractShiftData = (dataSection) => {
-const shifts = ['06-14', '14-22', '22-06'];
-const testTypes = ['Functional', 'Calibration', 'Accuracy', 'NICComTest', 'FinalTest'];
 
-return shifts.map((shift) => {
-const shiftData = {
+
+const extractShiftData = (shiftSummaryArray) => {
+const shiftTotals = {
+'06-14': initShiftData('06-14'),
+'14-22': initShiftData('14-22'),
+'22-06': initShiftData('22-06')
+};
+
+function initShiftData(shift) {
+return {
 shift,
 total: 0,
 completed: 0,
@@ -73,29 +78,79 @@ accuracy: 0,
 nic: 0,
 finalInit: 0
 };
+}
 
-testTypes.forEach((type) => {
-const testData = dataSection[type] || [];
-const totalEntry = testData.find(e => e.Shift === shift && e.Status === 'Total');
-const passEntry = testData.find(e => e.Shift === shift && e.Status === 'PASS');
-
-const total = totalEntry?.MeterCount || 0;
-const pass = passEntry?.MeterCount || 0;
-
-shiftData.total += total;
-shiftData.completed += pass;
-
-// Ensure these are totals for the shift, not just passes
-if (type === 'Functional') shiftData.functional += total;
-if (type === 'Calibration') shiftData.calibration += total;
-if (type === 'Accuracy') shiftData.accuracy += total;
-if (type === 'NICComTest') shiftData.nic += total;
-if (type === 'FinalTest') shiftData.finalInit += total;
-});
-
-return shiftData;
-});
+const getShiftCode = (shiftName) => {
+if (shiftName.includes('06-14')) return '06-14';
+if (shiftName.includes('14-22')) return '14-22';
+if (shiftName.includes('22-06')) return '22-06';
+return shiftName;
 };
+
+shiftSummaryArray.forEach((entry) => {
+const shift = getShiftCode(entry.ShiftName);
+if (!shiftTotals[shift]) return;
+
+const s = shiftTotals[shift];
+
+const functionalPass = entry.FunctionalTest_Pass || 0;
+const functionalFail = entry.FunctionalTest_Fail || 0;
+const calibrationPass = entry.CalibrationTest_Pass || 0;
+const calibrationFail = entry.CalibrationTest_Fail || 0;
+const accuracyPass = entry.AccuracyTest_Pass || 0;
+const accuracyFail = entry.AccuracyTest_Fail || 0;
+const nicPass = entry.NICComTest_Pass || 0;
+const nicFail = entry.NICComTest_Fail || 0;
+const finalPass = entry.FinalTest_Pass || 0;
+const finalFail = entry.FinalTest_Fail || 0;
+
+s.functional += functionalPass + functionalFail;
+s.calibration += calibrationPass + calibrationFail;
+s.accuracy += accuracyPass + accuracyFail;
+s.nic += nicPass + nicFail;
+s.finalInit += finalPass + finalFail;
+
+s.completed += functionalPass + calibrationPass + accuracyPass + nicPass + finalPass;
+
+s.total +=
+functionalPass + functionalFail +
+calibrationPass + calibrationFail +
+accuracyPass + accuracyFail +
+nicPass + nicFail +
+finalPass + finalFail;
+});
+
+return ['06-14', '14-22', '22-06'].map(shift => shiftTotals[shift]);
+};
+
+// Helper to compute total of a day from shift cards
+const calculateDayTotalsFromShifts = (shiftCards) => {
+return shiftCards.reduce(
+(acc, shift) => {
+acc.total += shift.total;
+acc.completed += shift.completed;
+acc.functional += shift.functional;
+acc.calibration += shift.calibration;
+acc.accuracy += shift.accuracy;
+acc.nic += shift.nic;
+acc.finalInit += shift.finalInit;
+return acc;
+},
+{
+total: 0,
+completed: 0,
+functional: 0,
+calibration: 0,
+accuracy: 0,
+nic: 0,
+finalInit: 0
+}
+);
+};
+
+
+
+
 
 // NEW: Function to extract weekly data from /user/week endpoint
 const extractWeeklyData = (weekData, startOfWeekDate) => {
@@ -168,33 +223,6 @@ dailyCompleted // This now holds correctly calculated daily totals, completed, a
 };
 };
 
-
-
-
-const calculateDayTotalsFromShifts = (shiftCards) => {
-return shiftCards.reduce(
-(acc, shift) => {
-acc.total += shift.total;
-acc.completed += shift.completed;
-acc.functional += shift.functional;
-acc.calibration += shift.calibration;
-acc.accuracy += shift.accuracy;
-acc.nic += shift.nic;
-acc.finalInit += shift.finalInit;
-return acc;
-},
-{
-total: 0,
-completed: 0,
-functional: 0,
-calibration: 0,
-accuracy: 0,
-nic: 0,
-finalInit: 0,
-}
-);
-};
-
 const Dashboard = () => {
 const [data, setData] = useState(null);
 const [loading, setLoading] = useState(true);
@@ -213,23 +241,25 @@ const formattedLastUpdate = lastUpdated
 : 'Fetching...';
 
 useEffect(() => {
-const interval = setInterval(() => setCurrentDate(new Date()), 1000);
-return () => clearInterval(interval);
-}, []);
+const cleanupFns = { current: [] }; // track timers for cleanup
 
-useEffect(() => {
+const intervalToUpdateClock = setInterval(() => {
+setCurrentDate(new Date()); // Live clock updater
+}, 1000);
 
+cleanupFns.current.push(() => clearInterval(intervalToUpdateClock));
 
 const fetchData = async () => {
 try {
 setLastUpdated(new Date());
+setLoading(true);
 
 // Fetch all required APIs in parallel
 const [countRes, presentWeekRes, previousWeekRes, hourlyRes] = await Promise.all([
 fetch(`${API_BASE}/user/count`),
 fetch(`${API_BASE}/user/week`),
 fetch(`${API_BASE}/user/week?previous=true`),
-fetch(`${API_BASE}/user/hourly`),
+fetch(`${API_BASE}/user/hourly`)
 ]);
 
 if (!countRes.ok || !presentWeekRes.ok || !hourlyRes.ok)
@@ -239,10 +269,8 @@ const countJson = await countRes.json();
 const presentWeekJson = await presentWeekRes.json();
 const previousWeekJson = previousWeekRes.ok ? await previousWeekRes.json() : null;
 const hourlyJson = await hourlyRes.json();
-
-
-// Data assignment
 const dailyData = countJson.data;
+
 const rawPresentWeekData = presentWeekJson.data.currentWeek;
 const rawPreviousWeekData = previousWeekJson?.data?.previousWeek || {
 Functional: [],
@@ -253,7 +281,6 @@ Final: []
 };
 
 const testTypes = ['Functional', 'Calibration', 'Accuracy', 'NIC', 'FinalTest'];
-
 const hours = [
 '06:00','07:00','08:00','09:00','10:00','11:00','12:00','13:00',
 '14:00','15:00','16:00','17:00','18:00','19:00','20:00','21:00',
@@ -261,11 +288,8 @@ const hours = [
 '6.00'
 ];
 
-const getTotalCount = (map, time, testType) =>
-map[time]?.[testType]?.total || 0;
-
-const getPassCount = (map, time, testType) =>
-map[time]?.[testType]?.pass || 0;
+const getTotalCount = (map, time, testType) => map[time]?.[testType]?.total || 0;
+const getPassCount = (map, time, testType) => map[time]?.[testType]?.pass || 0;
 
 const processHourlyData = (rawData) => {
 const map = {};
@@ -292,83 +316,56 @@ const buildHourlyDetails = (map) => {
 return hours.map(time => {
 const totals = {};
 let completedSum = 0;
-
 testTypes.forEach(testType => {
 const total = getTotalCount(map, time, testType);
 const pass = getPassCount(map, time, testType);
 totals[testType] = total;
 completedSum += pass;
 });
-
-return {
-time,
-...totals,
-completed: completedSum
-};
+return { time, ...totals, completed: completedSum };
 });
 };
 
-
-
-
-// ✅ MAIN EXECUTION (replace `hourlyJson` with your actual API response)
-// Converts raw API format to usable map format
 const hourlyMapCurrent = processHourlyData(hourlyJson.data?.current?.fullData || {});
 const hourlyMapPrevious = processHourlyData(hourlyJson.data?.previous?.fullData || {});
 
 const hourlyDetailsCurrent = buildHourlyDetails(hourlyMapCurrent);
 const hourlyDetailsPrevious = buildHourlyDetails(hourlyMapPrevious);
 
-
-
-
-// ✅ You can now use these values in state or dashboard cards
-console.log('Hourly Details (Present):', hourlyDetailsCurrent);
-console.log('Hourly Details (Previous):', hourlyDetailsPrevious);
-
-
-// Compute weekly date ranges
 const today = new Date();
 const startOfPresentWeek = new Date(today);
 startOfPresentWeek.setDate(today.getDate() - today.getDay());
 const startOfPreviousWeek = new Date(startOfPresentWeek);
 startOfPreviousWeek.setDate(startOfPresentWeek.getDate() - 7);
 
-// Extract shifts
-const presentShiftCards = extractShiftData(dailyData.today);
-const previousShiftCards = extractShiftData(dailyData.yesterday);
+const presentShiftCards = extractShiftData(dailyData?.today?.ShiftWiseSummary || []);
+const previousShiftCards = extractShiftData(dailyData?.yesterday?.ShiftWiseSummary || []);
 
-// Prepare final structured result
 const result = {
 presentDay: {
 ...calculateDayTotalsFromShifts(presentShiftCards),
 shift1: presentShiftCards[0],
 shift2: presentShiftCards[1],
 shift3: presentShiftCards[2],
-shiftCards: presentShiftCards,
-
-
+shiftCards: presentShiftCards
 },
 previousDay: {
 ...calculateDayTotalsFromShifts(previousShiftCards),
 shift1: previousShiftCards[0],
 shift2: previousShiftCards[1],
 shift3: previousShiftCards[2],
-shiftCards: previousShiftCards,
-
-
+shiftCards: previousShiftCards
 },
-
-
 presentWeek: extractWeeklyData(rawPresentWeekData, startOfPresentWeek),
 previousWeek: extractWeeklyData(rawPreviousWeekData, startOfPreviousWeek),
-
-hourlyDetails:{
+hourlyDetails: {
 current: hourlyDetailsCurrent,
 previous: hourlyDetailsPrevious
-},
-
+}
 };
+
+
+
 
 setData(result);
 setRefreshKey(prev => prev + 1);
@@ -381,30 +378,32 @@ setLoading(false);
 }
 };
 
-fetchData();
+fetchData(); // first call immediately
 
 const now = new Date();
-const delayToNext5Min =
-(5 - (now.getMinutes() % 5)) * 60 * 1000 -
-now.getSeconds() * 1000 -
-now.getMilliseconds();
+const minutes = now.getMinutes();
+const seconds = now.getSeconds();
+const milliseconds = now.getMilliseconds();
+
+const delayToNext15Min =
+((15 - (minutes % 15)) * 60 * 1000) - (seconds * 1000) - milliseconds;
 
 const timeoutId = setTimeout(() => {
-fetchData(); // align first update
-const intervalId = setInterval(fetchData, 5 * 60 * 1000); // 🔁 Every 5 min after that
+fetchData(); // 🔁 Align first repeat to next 15-min mark
 
-// Store on cleanup
+const intervalId = setInterval(fetchData, 15 * 60 * 1000); // 🔁 Repeat every 15 min
 cleanupFns.current.push(() => clearInterval(intervalId));
-}, delayToNext5Min);
+}, delayToNext15Min);
 
-const cleanupFns = { current: [] }; // track all timers for clean unmount
+cleanupFns.current.push(() => clearTimeout(timeoutId));
 
-// ⛔ Cleanup on unmount
+// ⛔ Clean on unmount
 return () => {
-clearTimeout(timeoutId);
 cleanupFns.current.forEach(fn => fn());
+cleanupFns.current = [];
 };
 }, []);
+
 
 const filteredHourlyDetails = useMemo(() => {
 if (!data?.hourlyDetails) return [];
@@ -891,6 +890,7 @@ animate="visible"
 exit="hidden"
 className="grid gap-4 grid-cols-1 sm:grid-cols-2 md:grid-cols-4"
 >
+{/* Overall Day Total Card */}
 <motion.div variants={itemVariants}>
 <StartCard1
 total={data?.[selectedRange === 'Day' ? 'presentDay' : 'previousDay']?.total || 0}
@@ -906,6 +906,7 @@ title={selectedRange}
 />
 </motion.div>
 
+{/* Individual Shift Cards */}
 {data?.[selectedRange === 'Day' ? 'presentDay' : 'previousDay']?.shiftCards?.map((shift, i) => (
 <motion.div key={i} variants={itemVariants}>
 <StarCard
@@ -916,8 +917,10 @@ calibration={shift.calibration}
 accuracy={shift.accuracy}
 nic={shift.nic}
 finalInit={shift.finalInit}
-bgColor={["from-purple-400 to-purple-600", "from-yellow-400 to-yellow-600", "from-indigo-400 to-indigo-600"][i]}
-icon={["calendar", "calendar", "calendar"][i]}
+bgColor={
+["from-purple-400 to-purple-600", "from-yellow-400 to-yellow-600", "from-indigo-400 to-indigo-600"][i]
+}
+icon="calendar"
 title={`Shift ${i + 1}`}
 />
 </motion.div>
@@ -934,7 +937,7 @@ animate="visible"
 exit="hidden"
 className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-4"
 >
-{/* Overall Week Card */}
+{/* Week Total Card */}
 <motion.div variants={itemVariants}>
 <StartCard1
 total={data?.[selectedRange === 'Present Week' ? 'presentWeek' : 'previousWeek']?.total || 0}
@@ -951,7 +954,7 @@ disableHover
 />
 </motion.div>
 
-{/* Daily Cards within the Week */}
+{/* Each Day Card in the Week */}
 {data?.[selectedRange === 'Present Week' ? 'presentWeek' : 'previousWeek']?.dailyCompleted?.map((item, i) => {
 const labels = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
 const colors = [
@@ -963,19 +966,19 @@ const dayName = labels[dateObj.getDay()];
 const dayDate = dateObj.toLocaleDateString('en-GB', {
 day: '2-digit',
 month: 'short',
-year: 'numeric' // <-- added year
+year: 'numeric'
 });
 
 return (
 <motion.div key={i} variants={itemVariants}>
 <StarCard
-total={item.total} // Pass the daily total (sum of all 'Total' statuses for the day)
-completed={item.value} // Pass the daily completed (sum of all 'PASS' statuses for the day)
-functional={item.functional} // Pass daily functional total
-calibration={item.calibration} // Pass daily calibration total
-accuracy={item.accuracy} // Pass daily accuracy total
-nic={item.nic} // Pass daily NIC total
-finalInit={item.finalInit} // Pass daily finalInit total
+total={item.total}
+completed={item.value}
+functional={item.functional}
+calibration={item.calibration}
+accuracy={item.accuracy}
+nic={item.nic}
+finalInit={item.finalInit}
 bgColor={colors[i % colors.length]}
 icon="calendar"
 title={`${dayDate} - ${dayName}`}
@@ -989,6 +992,7 @@ disableHover
 </motion.div>
 </AnimatePresence>
 </section>
+
 
 <section className="bg-white rounded-2xl shadow-lg p-4 sm:p-6 mt-4 font-poppins">
 <h2 className="text-xl sm:text-2xl font-bold text-center text-gray-700 mb-4 sm:mb-6">
@@ -1133,8 +1137,6 @@ grid: { drawBorder: false },
 </motion.div>
 </div>
 </section>
-
-
 
 
 <section className='bg-white rounded-2xl shadow-lg p-6 mt-6 font-poppins'>
