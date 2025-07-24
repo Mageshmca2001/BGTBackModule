@@ -4,11 +4,11 @@ import Production from "../Report-pages/Production";
 
 const AdProduction = () => {
 
-  return (
-    <AdminSidebar>
-      <Production />
-    </AdminSidebar>
-  );
+return (
+  <AdminSidebar>
+    <Production />
+  </AdminSidebar>
+);
 };
 
 export default AdProduction;

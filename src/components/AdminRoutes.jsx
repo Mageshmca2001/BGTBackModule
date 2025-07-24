@@ -178,7 +178,7 @@ Users
 </li>
 
 {/* Users */}
-<li>
+{/* <li>
 <Link
 to="/testJig"
 className="flex items-center p-3 text-white rounded-lg hover:bg-gray-200 group"
@@ -190,7 +190,7 @@ TestJig
 </span>
 )}
 </Link>
-</li>
+</li> */}
 
 
 {/* Users */}
@@ -209,7 +209,7 @@ Tester DC
 </li>
 
 {/* Users */}
-<li>
+{/* <li>
 <Link
 to="/group"
 className="flex items-center p-3 text-white rounded-lg hover:bg-gray-200 group"
@@ -221,7 +221,7 @@ Production Lines
 </span>
 )}
 </Link>
-</li>
+</li> */}
 
 
 </ul>

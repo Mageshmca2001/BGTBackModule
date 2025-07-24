@@ -30,8 +30,8 @@ return (
 <Route path="/pages/Monthly" element={<AdMonReports />} />
 <Route path="/pages/Meter" element={<AdMeterReports />} />
 <Route path="/user" element={<Userinfo />} />
-<Route path="/testJig" element={<AdTestjig />} />
-<Route path="/group" element={<AdProduction />} />
+{/* <Route path="/testJig" element={<AdTestjig />} /> */}
+{/* <Route path="/group" element={<AdProduction />} /> */}
 <Route path="/test2" element={<AdTestDC/>}/>
 </Route>
 
