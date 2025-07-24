@@ -51,7 +51,7 @@ flex flex-col justify-between h-full`}
 {/* Multiple Tags */}
 <div className="mt-4 space-y-2">
 <div className="w-full text-black bg-white text-xs font-medium md:text-sm px-4 py-2 rounded shadow-md border border-white hover:bg-gray-600 hover:text-white  transition text-center">
-Functional: {functional}
+Functional Test: {functional}
 </div>
 <div className="w-full text-black bg-white  text-xs font-medium md:text-sm px-4 py-2 rounded shadow-md border border-white hover:bg-gray-600 hover:text-white transition text-center">
 Calibration: {calibration}
@@ -60,10 +60,10 @@ Calibration: {calibration}
 Accuracy: {accuracy}
 </div>
 <div className="w-full text-black bg-white text-xs font-medium md:text-sm px-4 py-2 rounded shadow-md border border-white hover:bg-gray-600 hover:text-white transition text-center">
-NIC: {nic}
+NICCOM Test: {nic}
 </div>
 <div className="w-full text-black bg-white text-xs font-medium md:text-sm px-4 py-2 rounded shadow-md border border-white hover:bg-gray-600 hover:text-white transition text-center">
-FinalTest: {finalInit}
+Final Test: {finalInit}
 </div>
 <div className="w-full bg-green-500 text-white font-medium  text-xs md:text-sm px-4 py-2 rounded shadow-md border border-white hover:bg-green-600 transition text-center">
 Completed: {completed}
