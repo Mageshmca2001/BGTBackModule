@@ -597,7 +597,9 @@ year: 'numeric'
 });
 });
 })()
-: filteredHourlyDetails
+: Array.from(
+new Set(
+filteredHourlyDetails
 .filter(item => isTimeInShift(item.time, selectedShift))
 .map(item => {
 const startHour = parseInt(item.time, 10);
@@ -605,10 +607,11 @@ const endHour = (startHour + 1) % 24;
 
 const format = (h) => String(h).padStart(2, '0') + '.00';
 return `${format(startHour)} - ${format(endHour)}`;
-});
+})
+)
+)
 
 const colors = ['#3B82F6', '#F59E0B', '#10B981', '#EF4444', '#8B5CF6'];
-
 const datasets = [
 // Static 'Completed' dataset
 {
@@ -635,8 +638,6 @@ barPercentage: 0.7,
 categoryPercentage: 0.9,
 borderRadius: 0,
 })),
-
-
 // Tracking line
 {
 label: 'Tracking Line',
@@ -648,7 +649,6 @@ pointRadius: 3,
 tension: 0.3,
 type: 'line',
 },
-
 // Threshold line
 {
 label: 'Threshold',
@@ -661,7 +661,6 @@ fill: false,
 type: 'line',
 },
 ];
-
 
 const firstFieldPieData = useMemo(() => {
 let report = { passed: 0, failed: 0 };
@@ -709,7 +708,6 @@ hoverOffset: 10,
 }]
 };
 }, [data, selectedRange]);
-
 
 const firstFieldPieOptions = {
 responsive: true,
@@ -1194,6 +1192,51 @@ grid: { drawBorder: false },
 </div>
 </section>
 
+
+{/* <section className='bg-white rounded-2xl shadow-lg p-6 mt-6 font-poppins'>
+<motion.div> */}
+{/* <h3 className="text-2xl font-semibold text-primary text-center mb-8">
+Total Summary
+</h3> */}
+
+{/* <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4 text-center justify-center"> */}
+
+{/* ✅ Completed Total */}
+{/* <div className="bg-white shadow rounded-lg p-4 border border-gray-200">
+<div className="text-sm font-medium text-gray-600">Completed</div>
+<div className="text-xl font-bold text-green-600">
+{['Present Week', 'Previous Week'].includes(selectedRange)
+? (
+data?.[selectedRange === 'Present Week' ? 'presentWeek' : 'previousWeek']
+?.dailyCompleted?.reduce((sum, day) => sum + (day.value || 0), 0) || 0
+)
+: filteredHourlyDetails.reduce((sum, item) => sum + (item.completed || 0), 0)}
+</div>
+</div> */}
+
+{/* ✅ Functional to FinalTest Totals */}
+{/* {breakdownFields.map((field, index) => {
+const backendKey = fieldKeyMap[field];
+
+const total = ['Present Week', 'Previous Week'].includes(selectedRange)
+? (
+data?.[selectedRange === 'Present Week' ? 'presentWeek' : 'previousWeek']
+?.dailyCompleted?.reduce((sum, day) => sum + (day[backendKey] || 0), 0) || 0
+)
+: (
+filteredHourlyDetails.reduce((sum, item) => sum + (item[field] || 0), 0)
+);
+
+return (
+<div key={field} className="bg-white shadow rounded-lg p-4 border border-gray-200">
+<div className="text-sm font-medium text-gray-600">{field}</div>
+<div className="text-xl font-bold" style={{ color: colors[index] }}>{total}</div>
+</div>
+);
+})}
+</div> */}
+{/* </motion.div>
+</section> */}
 
 
 
