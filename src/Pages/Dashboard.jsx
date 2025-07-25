@@ -58,12 +58,15 @@ ease: 'easeOut'
 }
 };
 
-const extractShiftData = (dataSection) => {
-const shifts = ['06-14', '14-22', '22-06'];
-const testTypes = ['Functional', 'Calibration', 'Accuracy', 'NICComTest', 'FinalTest'];
+const extractShiftData = (shiftSummaryArray) => {
+const shiftTotals = {
+'06-14': initShiftData('06-14'),
+'14-22': initShiftData('14-22'),
+'22-06': initShiftData('22-06')
+};
 
-return shifts.map((shift) => {
-const shiftData = {
+function initShiftData(shift) {
+return {
 shift,
 total: 0,
 completed: 0,
@@ -73,104 +76,52 @@ accuracy: 0,
 nic: 0,
 finalInit: 0
 };
+}
 
-testTypes.forEach((type) => {
-const testData = dataSection[type] || [];
-const totalEntry = testData.find(e => e.Shift === shift && e.Status === 'Total');
-const passEntry = testData.find(e => e.Shift === shift && e.Status === 'PASS');
-
-const total = totalEntry?.MeterCount || 0;
-const pass = passEntry?.MeterCount || 0;
-
-shiftData.total += total;
-shiftData.completed += pass;
-
-// Ensure these are totals for the shift, not just passes
-if (type === 'Functional') shiftData.functional += total;
-if (type === 'Calibration') shiftData.calibration += total;
-if (type === 'Accuracy') shiftData.accuracy += total;
-if (type === 'NICComTest') shiftData.nic += total;
-if (type === 'FinalTest') shiftData.finalInit += total;
-});
-
-return shiftData;
-});
+const getShiftCode = (shiftName) => {
+if (shiftName.includes('06-14')) return '06-14';
+if (shiftName.includes('14-22')) return '14-22';
+if (shiftName.includes('22-06')) return '22-06';
+return shiftName;
 };
 
-// NEW: Function to extract weekly data from /user/week endpoint
-const extractWeeklyData = (weekData, startOfWeekDate) => {
-// Corrected to match your JSON keys and `Final` test type
-const testTypes = ['Functional', 'Calibration', 'Accuracy', 'NIC', 'Final'];
+shiftSummaryArray.forEach((entry) => {
+const shift = getShiftCode(entry.ShiftName);
+if (!shiftTotals[shift]) return;
 
-// Generate array of YYYY-MM-DD strings for the 7 days of the week
-const daysOfWeek = Array.from({ length: 7 }, (_, i) => {
-const d = new Date(startOfWeekDate);
-d.setDate(startOfWeekDate.getDate() + i);
-return d.toISOString().split('T')[0]; // Format as YYYY-MM-DD
+const s = shiftTotals[shift];
+
+const functionalPass = entry.FunctionalTest_Pass || 0;
+const functionalFail = entry.FunctionalTest_Fail || 0;
+const calibrationPass = entry.CalibrationTest_Pass || 0;
+const calibrationFail = entry.CalibrationTest_Fail || 0;
+const accuracyPass = entry.AccuracyTest_Pass || 0;
+const accuracyFail = entry.AccuracyTest_Fail || 0;
+const nicPass = entry.NICComTest_Pass || 0;
+const nicFail = entry.NICComTest_Fail || 0;
+const finalPass = entry.FinalTest_Pass || 0;
+const finalFail = entry.FinalTest_Fail || 0;
+
+s.functional += functionalPass + functionalFail;
+s.calibration += calibrationPass + calibrationFail;
+s.accuracy += accuracyPass + accuracyFail;
+s.nic += nicPass + nicFail;
+s.finalInit += finalPass + finalFail;
+
+s.completed += functionalPass + calibrationPass + accuracyPass + nicPass + finalPass;
+
+s.total +=
+functionalPass + functionalFail +
+calibrationPass + calibrationFail +
+accuracyPass + accuracyFail +
+nicPass + nicFail +
+finalPass + finalFail;
 });
 
-// Initialize daily breakdown for the week
-const dailyCompleted = daysOfWeek.map((dateString) => ({
-date: dateString,
-total: 0,      // Sum of 'Total' meters for all types on this day
-value: 0,      // Sum of 'PASS' meters for all types on this day (used for 'completed' in cards)
-functional: 0, // Sum of 'Total' functional meters for this day
-calibration: 0, // Sum of 'Total' calibration meters for this day
-accuracy: 0,    // Sum of 'Total' accuracy meters for this day
-nic: 0,         // Sum of 'Total' NIC meters for this day
-finalInit: 0    // Sum of 'Total' final meters for this day
-}));
-
-// Process data for each test type
-testTypes.forEach((testType) => {
-const testData = weekData[testType] || []; // Get the array for the current testType
-
-testData.forEach((entry) => {
-const entryDate = entry.TestDate ? new Date(entry.TestDate).toISOString().split('T')[0] : null;
-
-if (entryDate && daysOfWeek.includes(entryDate)) {
-const dailyEntry = dailyCompleted.find(d => d.date === entryDate); // Find the correct day entry
-
-if (dailyEntry) {
-const meterCount = entry['Meter Count'] || 0;
-
-if (entry.Status === 'Total') {
-dailyEntry.total += meterCount; // Accumulate total meters for the day
-// Accumulate total meters for specific test types (for breakdown)
-if (testType === 'Functional') dailyEntry.functional += meterCount;
-else if (testType === 'Calibration') dailyEntry.calibration += meterCount;
-else if (testType === 'Accuracy') dailyEntry.accuracy += meterCount;
-else if (testType === 'NIC') dailyEntry.nic += meterCount;
-else if (testType === 'Final') dailyEntry.finalInit += meterCount;
-}
-if (entry.Status === 'PASS') {
-dailyEntry.value += meterCount; // Accumulate completed (PASS) meters for the day
-}
-}
-}
-});
-});
-
-// Calculate overall weekly totals from the daily breakdown
-const weeklyTotals = {
-total: dailyCompleted.reduce((sum, day) => sum + day.total, 0),
-completed: dailyCompleted.reduce((sum, day) => sum + day.value, 0),
-functional: dailyCompleted.reduce((sum, day) => sum + day.functional, 0),
-calibration: dailyCompleted.reduce((sum, day) => sum + day.calibration, 0),
-accuracy: dailyCompleted.reduce((sum, day) => sum + day.accuracy, 0),
-nic: dailyCompleted.reduce((sum, day) => sum + day.nic, 0),
-finalInit: dailyCompleted.reduce((sum, day) => sum + day.finalInit, 0)
+return ['06-14', '14-22', '22-06'].map(shift => shiftTotals[shift]);
 };
 
-return {
-...weeklyTotals,
-dailyCompleted // This now holds correctly calculated daily totals, completed, and type breakdowns
-};
-};
-
-
-
-
+// Helper to compute total of a day from shift cards
 const calculateDayTotalsFromShifts = (shiftCards) => {
 return shiftCards.reduce(
 (acc, shift) => {
@@ -190,10 +141,87 @@ functional: 0,
 calibration: 0,
 accuracy: 0,
 nic: 0,
-finalInit: 0,
+finalInit: 0
 }
 );
 };
+
+const extractWeeklyData = (weekArray, startOfWeekDate) => {
+const testTypes = [
+{ key: 'Functional', field: 'functional' },
+{ key: 'Calibration', field: 'calibration' },
+{ key: 'Accuracy', field: 'accuracy' },
+{ key: 'NICCom', field: 'nic' },
+{ key: 'FinalTest', field: 'finalInit' },
+];
+
+// 🧠 Convert string "YYYY-MM-DD" to Date object
+let startDateObj;
+if (typeof startOfWeekDate === 'string') {
+const [yyyy, mm, dd] = startOfWeekDate.split('-').map(Number);
+startDateObj = new Date(yyyy, mm - 1, dd);
+} else {
+startDateObj = new Date(startOfWeekDate);
+}
+
+// 🧾 Format JS Date → "DD.MM.YYYY"
+const formatDisplayDate = (date) => {
+const dd = String(date.getDate()).padStart(2, '0');
+const mm = String(date.getMonth() + 1).padStart(2, '0');
+const yyyy = date.getFullYear();
+return `${dd}.${mm}.${yyyy}`;
+};
+
+// 📆 Build 7-day date list in DD.MM.YYYY format
+const weekDates = Array.from({ length: 7 }, (_, i) => {
+const d = new Date(startDateObj);
+d.setDate(startDateObj.getDate() + i);
+return formatDisplayDate(d);
+});
+
+// 🛠️ Initialize daily summary
+const dailyCompleted = weekDates.map(date => ({
+date,
+total: 0,
+value: 0,
+functional: 0,
+calibration: 0,
+accuracy: 0,
+nic: 0,
+finalInit: 0
+}));
+
+// 🔁 Map JSON data into the week structure
+weekArray.forEach(entry => {
+const entryDate = entry.date?.trim(); // e.g. "20.07.2025"
+const day = dailyCompleted.find(d => d.date === entryDate);
+if (!day) return;
+
+testTypes.forEach(({ key, field }) => {
+const count = entry[key] || 0;
+day[field] += count;
+day.total += count;
+});
+
+day.value += entry.Completed || 0;
+});
+
+// 📊 Weekly totals
+const weeklyTotals = {
+total: dailyCompleted.reduce((sum, d) => sum + d.total, 0),
+completed: dailyCompleted.reduce((sum, d) => sum + d.value, 0),
+functional: dailyCompleted.reduce((sum, d) => sum + d.functional, 0),
+calibration: dailyCompleted.reduce((sum, d) => sum + d.calibration, 0),
+accuracy: dailyCompleted.reduce((sum, d) => sum + d.accuracy, 0),
+nic: dailyCompleted.reduce((sum, d) => sum + d.nic, 0),
+finalInit: dailyCompleted.reduce((sum, d) => sum + d.finalInit, 0),
+dailyCompleted
+};
+
+return weeklyTotals;
+};
+
+
 
 const Dashboard = () => {
 const [data, setData] = useState(null);
@@ -213,11 +241,12 @@ const formattedLastUpdate = lastUpdated
 : 'Fetching...';
 
 useEffect(() => {
-const interval = setInterval(() => setCurrentDate(new Date()), 1000);
-return () => clearInterval(interval);
-}, []);
+const cleanupFns = { current: [] };
 
-useEffect(() => {
+const intervalToUpdateClock = setInterval(() => {
+setCurrentDate(new Date());
+}, 1000);
+cleanupFns.current.push(() => clearInterval(intervalToUpdateClock));
 
 
 const fetchData = async () => {
@@ -309,8 +338,6 @@ completed: completedSum
 };
 
 
-
-
 // ✅ MAIN EXECUTION (replace `hourlyJson` with your actual API response)
 // Converts raw API format to usable map format
 const hourlyMapCurrent = processHourlyData(hourlyJson.data?.current?.fullData || {});
@@ -318,9 +345,6 @@ const hourlyMapPrevious = processHourlyData(hourlyJson.data?.previous?.fullData 
 
 const hourlyDetailsCurrent = buildHourlyDetails(hourlyMapCurrent);
 const hourlyDetailsPrevious = buildHourlyDetails(hourlyMapPrevious);
-
-
-
 
 // ✅ You can now use these values in state or dashboard cards
 console.log('Hourly Details (Present):', hourlyDetailsCurrent);
@@ -335,8 +359,8 @@ const startOfPreviousWeek = new Date(startOfPresentWeek);
 startOfPreviousWeek.setDate(startOfPresentWeek.getDate() - 7);
 
 // Extract shifts
-const presentShiftCards = extractShiftData(dailyData.today);
-const previousShiftCards = extractShiftData(dailyData.yesterday);
+const presentShiftCards = extractShiftData(dailyData?.today?.ShiftWiseSummary || []);
+const previousShiftCards = extractShiftData(dailyData?.yesterday?.ShiftWiseSummary || []);
 
 // Prepare final structured result
 const result = {
@@ -345,29 +369,21 @@ presentDay: {
 shift1: presentShiftCards[0],
 shift2: presentShiftCards[1],
 shift3: presentShiftCards[2],
-shiftCards: presentShiftCards,
-
-
+shiftCards: presentShiftCards
 },
 previousDay: {
 ...calculateDayTotalsFromShifts(previousShiftCards),
 shift1: previousShiftCards[0],
 shift2: previousShiftCards[1],
 shift3: previousShiftCards[2],
-shiftCards: previousShiftCards,
-
-
+shiftCards: previousShiftCards
 },
-
-
 presentWeek: extractWeeklyData(rawPresentWeekData, startOfPresentWeek),
 previousWeek: extractWeeklyData(rawPreviousWeekData, startOfPreviousWeek),
-
 hourlyDetails:{
 current: hourlyDetailsCurrent,
 previous: hourlyDetailsPrevious
 },
-
 };
 
 setData(result);
@@ -384,25 +400,22 @@ setLoading(false);
 fetchData();
 
 const now = new Date();
-const delayToNext5Min =
-(5 - (now.getMinutes() % 5)) * 60 * 1000 -
-now.getSeconds() * 1000 -
-now.getMilliseconds();
+const minutes = now.getMinutes();
+const seconds = now.getSeconds();
+const milliseconds = now.getMilliseconds();
+const delayToNext15Min = ((15 - (minutes % 15)) * 60 * 1000) - (seconds * 1000) - milliseconds;
 
 const timeoutId = setTimeout(() => {
-fetchData(); // align first update
-const intervalId = setInterval(fetchData, 5 * 60 * 1000); // 🔁 Every 5 min after that
-
-// Store on cleanup
+fetchData();
+const intervalId = setInterval(fetchData, 15 * 60 * 1000);
 cleanupFns.current.push(() => clearInterval(intervalId));
-}, delayToNext5Min);
+}, delayToNext15Min);
 
-const cleanupFns = { current: [] }; // track all timers for clean unmount
+cleanupFns.current.push(() => clearTimeout(timeoutId));
 
-// ⛔ Cleanup on unmount
 return () => {
-clearTimeout(timeoutId);
 cleanupFns.current.forEach(fn => fn());
+cleanupFns.current = [];
 };
 }, []);
 
@@ -529,14 +542,10 @@ data?.[selectedRange === 'Present Week' ? 'presentWeek' : 'previousWeek']
 .filter(item => isTimeInShift(item.time, selectedShift))
 .map(item => item.completed || 0);
 
-
-// Enhanced breakdown data for weekly view and hourly view
-
 const breakdownData =
 ['Present Week', 'Previous Week'].includes(selectedRange)
 ? (() => {
-const weekData =
-data?.[selectedRange === 'Present Week' ? 'presentWeek' : 'previousWeek'];
+const weekData = data?.[selectedRange === 'Present Week' ? 'presentWeek' : 'previousWeek'];
 if (!weekData?.dailyCompleted) return {};
 
 return {
@@ -560,6 +569,27 @@ NIC: shiftFiltered.map((item) => item.NIC || 0),
 FinalTest: shiftFiltered.map((item) => item.FinalTest || 0),
 };
 })();
+
+// ✅ Weekly or hourly chart labels
+const chartLabels = ['Present Week', 'Previous Week'].includes(selectedRange)
+? (() => {
+const weekData = data?.[selectedRange === 'Present Week' ? 'presentWeek' : 'previousWeek'];
+if (!weekData?.dailyCompleted) return [];
+
+return weekData.dailyCompleted.map(({ date }) => {
+const [dd, mm, yyyy] = date.split('.');
+const parsedDate = new Date(`${yyyy}-${mm}-${dd}`);
+return parsedDate.toLocaleDateString('en-GB', {
+day: '2-digit',
+month: 'short',
+year: 'numeric'
+});
+});
+})()
+: filteredHourlyDetails
+.filter(item => isTimeInShift(item.time, selectedShift))
+.map(item => item.time); // Or format hours as needed
+
 
 
 const colors = ['#3B82F6', '#F59E0B', '#10B981', '#EF4444', '#8B5CF6'];
@@ -883,6 +913,7 @@ exit={{ opacity: 0, y: -10 }}
 transition={{ duration: 0.4 }}
 >
 {/* Present Day & Previous Day cards */}
+{/* Present Day & Previous Day cards */}
 {(selectedRange === 'Day' || selectedRange === 'Previous Day') && (
 <motion.div
 variants={containerVariants}
@@ -891,6 +922,7 @@ animate="visible"
 exit="hidden"
 className="grid gap-4 grid-cols-1 sm:grid-cols-2 md:grid-cols-4"
 >
+{/* Overall Day Total Card */}
 <motion.div variants={itemVariants}>
 <StartCard1
 total={data?.[selectedRange === 'Day' ? 'presentDay' : 'previousDay']?.total || 0}
@@ -906,6 +938,7 @@ title={selectedRange}
 />
 </motion.div>
 
+{/* Individual Shift Cards */}
 {data?.[selectedRange === 'Day' ? 'presentDay' : 'previousDay']?.shiftCards?.map((shift, i) => (
 <motion.div key={i} variants={itemVariants}>
 <StarCard
@@ -916,14 +949,17 @@ calibration={shift.calibration}
 accuracy={shift.accuracy}
 nic={shift.nic}
 finalInit={shift.finalInit}
-bgColor={["from-purple-400 to-purple-600", "from-yellow-400 to-yellow-600", "from-indigo-400 to-indigo-600"][i]}
-icon={["calendar", "calendar", "calendar"][i]}
+bgColor={
+["from-purple-400 to-purple-600", "from-yellow-400 to-yellow-600", "from-indigo-400 to-indigo-600"][i]
+}
+icon="calendar"
 title={`Shift ${i + 1}`}
 />
 </motion.div>
 ))}
 </motion.div>
 )}
+
 
 {/* Present Week & Previous Week cards */}
 {(selectedRange === 'Present Week' || selectedRange === 'Previous Week') && (
@@ -958,24 +994,28 @@ const colors = [
 "from-teal-400 to-teal-600", "from-purple-400 to-purple-600", "from-rose-400 to-rose-600",
 "from-indigo-400 to-indigo-600", "from-yellow-400 to-yellow-600", "from-pink-400 to-pink-600", "from-blue-400 to-blue-600"
 ];
-const dateObj = new Date(item.date);
+
+// ✅ Parse 'DD.MM.YYYY' to valid Date
+const [dd, mm, yyyy] = item.date.split('.');
+const dateObj = new Date(`${yyyy}-${mm}-${dd}`); // Now valid Date object
+
 const dayName = labels[dateObj.getDay()];
 const dayDate = dateObj.toLocaleDateString('en-GB', {
 day: '2-digit',
 month: 'short',
-year: 'numeric' // <-- added year
+year: 'numeric'
 });
 
 return (
 <motion.div key={i} variants={itemVariants}>
 <StarCard
-total={item.total} // Pass the daily total (sum of all 'Total' statuses for the day)
-completed={item.value} // Pass the daily completed (sum of all 'PASS' statuses for the day)
-functional={item.functional} // Pass daily functional total
-calibration={item.calibration} // Pass daily calibration total
-accuracy={item.accuracy} // Pass daily accuracy total
-nic={item.nic} // Pass daily NIC total
-finalInit={item.finalInit} // Pass daily finalInit total
+total={item.total}
+completed={item.value}
+functional={item.functional}
+calibration={item.calibration}
+accuracy={item.accuracy}
+nic={item.nic}
+finalInit={item.finalInit}
 bgColor={colors[i % colors.length]}
 icon="calendar"
 title={`${dayDate} - ${dayName}`}
@@ -984,6 +1024,7 @@ disableHover
 </motion.div>
 );
 })}
+
 </motion.div>
 )}
 </motion.div>
@@ -1070,7 +1111,7 @@ minWidth: `${Math.max(labels.length * 140, 1000)}px`,
 }}
 >
 <Bar
-data={{ labels, datasets: filteredDatasets }}
+data={{ labels: chartLabels, datasets: filteredDatasets }}
 options={{
 responsive: true,
 maintainAspectRatio: false,
@@ -1137,54 +1178,6 @@ grid: { drawBorder: false },
 
 
 
-<section className='bg-white rounded-2xl shadow-lg p-6 mt-6 font-poppins'>
-<motion.div>
-<h3 className="text-2xl font-semibold text-primary text-center mb-8">
-Total Summary
-</h3>
-
-<div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4 text-center justify-center">
-
-{/* ✅ Completed Total */}
-<div className="bg-white shadow rounded-lg p-4 border border-gray-200">
-<div className="text-sm font-medium text-gray-600">Completed</div>
-<div className="text-xl font-bold text-green-600">
-{['Present Week', 'Previous Week'].includes(selectedRange)
-? (
-  data?.[selectedRange === 'Present Week' ? 'presentWeek' : 'previousWeek']
-    ?.dailyCompleted?.reduce((sum, day) => sum + (day.value || 0), 0) || 0
-)
-: filteredHourlyDetails.reduce((sum, item) => sum + (item.completed || 0), 0)}
-</div>
-</div>
-
-{/* ✅ Functional to FinalTest Totals */}
-{breakdownFields.map((field, index) => {
-const backendKey = fieldKeyMap[field];
-
-const total = ['Present Week', 'Previous Week'].includes(selectedRange)
-? (
-data?.[selectedRange === 'Present Week' ? 'presentWeek' : 'previousWeek']
-  ?.dailyCompleted?.reduce((sum, day) => sum + (day[backendKey] || 0), 0) || 0
-)
-: (
-filteredHourlyDetails.reduce((sum, item) => sum + (item[field] || 0), 0)
-);
-
-return (
-<div key={field} className="bg-white shadow rounded-lg p-4 border border-gray-200">
-<div className="text-sm font-medium text-gray-600">{field}</div>
-<div className="text-xl font-bold" style={{ color: colors[index] }}>{total}</div>
-</div>
-);
-})}
-</div>
-</motion.div>
-</section>
-
-
-
-
 <section className="bg-white rounded-2xl shadow-lg p-6 mt-6 font-poppins">
 <h2 className="text-2xl font-bold text-center text-primary mb-8">First Yield & {getDailyReportTitle()}</h2>
 
@@ -1196,46 +1189,70 @@ transition={{ duration: 0.5 }}
 className="grid grid-cols-1 md:grid-cols-2 gap-6"
 >
 
-{/* First Yield Report Box */}
-<div className="bg-gray-50 rounded-xl shadow p-6 flex flex-col sm:flex-row-reverse items-center sm:items-center gap-6">
-
-{/* Pie Chart on Right with Heading Inside */}
-<div className="flex flex-col items-center w-[280px]">
-<h3 className="text-lg font-semibold text-primary mb-4">First Yield Report</h3>
-<div className="relative w-[280px] h-[280px]">
-<Pie data={firstFieldPieData} options={firstFieldPieOptions} plugins={[ChartDataLabels]} />
-</div>
-</div>
-
-{/* Total Tested on Left */}
-<div className="flex-1 w-full sm:w-auto">
-<div className="grid grid-cols gap-4 text-center">
-<div className="bg-white border rounded px-2 p-4 shadow">
+<div className="bg-gray-50 rounded-xl shadow p-6 flex flex-col sm:flex-row sm:justify-center sm:items-center gap-8">
+{/* Total Tested on the Left (desktop), Bottom (mobile) */}
+<div className="order-2 sm:order-1 sm:self-center sm:mr-4">
+<div className="bg-white border rounded px-4 py-3 shadow w-48 text-center">
 <div className="text-sm text-gray-600">Total Tested</div>
 <div className="text-xl font-bold text-blue-600">
-{((
+{(
 (firstFieldPieData.datasets[0].data?.[0] ?? 0) +
 (firstFieldPieData.datasets[0].data?.[1] ?? 0)
-).toFixed(0))}
-</div>
-</div>
+).toFixed(0)}
 </div>
 </div>
 </div>
 
+{/* Pie Chart with Heading */}
+
+<div className="order-1 sm:order-2 flex flex-col items-center w-full max-w-[280px]">
+<h3 className="text-lg font-semibold text-primary mb-4">
+First Yield Report
+</h3>
+<div className="relative w-full aspect-square">
+<Pie
+data={firstFieldPieData}
+options={firstFieldPieOptions}
+plugins={[ChartDataLabels]}
+/>
+</div>
+</div>
+</div>
 
 
 {/* Daily Report Box */}
-<div className="bg-gray-50 rounded-xl shadow p-6 flex flex-col items-center">
+<div className="bg-gray-50 rounded-xl shadow p-6 flex flex-col sm:flex-row sm:justify-center sm:items-center gap-8">
+{/* Total Tested on the Left (desktop), Bottom (mobile) */}
+<div className="order-2 sm:order-1 sm:self-center sm:mr-4">
+<div className="bg-white border rounded px-4 py-3 shadow w-48 text-center">
+<div className="text-sm text-gray-600">Reworked</div>
+<div className="text-xl font-bold text-blue-600">
+{(
+(dailyReportPieData.datasets[0].data?.[2] ?? 0)
+).toFixed(0)}
+</div>
+</div>
+</div>
+
+{/* Pie Chart with Heading */}
+
+<div className="order-1 sm:order-2 flex flex-col items-center w-full max-w-[280px]">
 <h3 className="text-lg font-semibold text-primary mb-4">
 {getDailyReportTitle()}
 </h3>
-<div className="relative w-[280px] h-[280px]">
-<Pie data={dailyReportPieData} options={dailyReportPieOptions} plugins={[ChartDataLabels]} />
+<div className="relative w-full aspect-square">
+<Pie
+data={dailyReportPieData}
+options={dailyReportPieOptions}
+plugins={[ChartDataLabels]}
+/>
 </div>
 </div>
+</div>
+
 </motion.div>
 </section>
+
 
 <section className="bg-white rounded-2xl shadow-lg p-6 mt-6 font-poppins">
 
