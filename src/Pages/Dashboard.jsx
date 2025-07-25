@@ -74,7 +74,8 @@ functional: 0,
 calibration: 0,
 accuracy: 0,
 nic: 0,
-finalInit: 0
+finalInit: 0,
+rework: 0
 };
 }
 
@@ -93,23 +94,44 @@ const s = shiftTotals[shift];
 
 const functionalPass = entry.FunctionalTest_Pass || 0;
 const functionalFail = entry.FunctionalTest_Fail || 0;
+const functionalRework = entry.FunctionalTest_Rework || 0;
+
 const calibrationPass = entry.CalibrationTest_Pass || 0;
 const calibrationFail = entry.CalibrationTest_Fail || 0;
+const calibrationRework = entry.CalibrationTest_Rework || 0;
+
 const accuracyPass = entry.AccuracyTest_Pass || 0;
 const accuracyFail = entry.AccuracyTest_Fail || 0;
+const accuracyRework = entry.AccuracyTest_Rework || 0;
+
 const nicPass = entry.NICComTest_Pass || 0;
 const nicFail = entry.NICComTest_Fail || 0;
+const nicRework = entry.NICComTest_Rework || 0;
+
 const finalPass = entry.FinalTest_Pass || 0;
 const finalFail = entry.FinalTest_Fail || 0;
+const finalRework = entry.FinalTest_Rework || 0;
 
+// Add total count for each test type (pass + fail)
 s.functional += functionalPass + functionalFail;
 s.calibration += calibrationPass + calibrationFail;
 s.accuracy += accuracyPass + accuracyFail;
 s.nic += nicPass + nicFail;
 s.finalInit += finalPass + finalFail;
 
-s.completed += functionalPass + calibrationPass + accuracyPass + nicPass + finalPass;
+// Add rework count (all tests)
+s.rework +=
+functionalRework +
+calibrationRework +
+accuracyRework +
+nicRework +
+finalRework;
 
+// Completed is total of all "PASS"
+s.completed +=
+functionalPass + calibrationPass + accuracyPass + nicPass + finalPass;
+
+// Total includes pass + fail only (not rework)
 s.total +=
 functionalPass + functionalFail +
 calibrationPass + calibrationFail +
@@ -120,7 +142,6 @@ finalPass + finalFail;
 
 return ['06-14', '14-22', '22-06'].map(shift => shiftTotals[shift]);
 };
-
 // Helper to compute total of a day from shift cards
 const calculateDayTotalsFromShifts = (shiftCards) => {
 return shiftCards.reduce(
@@ -132,6 +153,7 @@ acc.calibration += shift.calibration;
 acc.accuracy += shift.accuracy;
 acc.nic += shift.nic;
 acc.finalInit += shift.finalInit;
+acc.rework += shift.rework; // ✅ include rework
 return acc;
 },
 {
@@ -141,11 +163,11 @@ functional: 0,
 calibration: 0,
 accuracy: 0,
 nic: 0,
-finalInit: 0
+finalInit: 0,
+rework: 0 // ✅ initialize rework
 }
 );
 };
-
 const extractWeeklyData = (weekArray, startOfWeekDate) => {
 const testTypes = [
 { key: 'Functional', field: 'functional' },
@@ -155,7 +177,7 @@ const testTypes = [
 { key: 'FinalTest', field: 'finalInit' },
 ];
 
-// 🧠 Convert string "YYYY-MM-DD" to Date object
+// 🧠 Convert "YYYY-MM-DD" string to Date
 let startDateObj;
 if (typeof startOfWeekDate === 'string') {
 const [yyyy, mm, dd] = startOfWeekDate.split('-').map(Number);
@@ -164,7 +186,7 @@ startDateObj = new Date(yyyy, mm - 1, dd);
 startDateObj = new Date(startOfWeekDate);
 }
 
-// 🧾 Format JS Date → "DD.MM.YYYY"
+// Format Date → "DD.MM.YYYY"
 const formatDisplayDate = (date) => {
 const dd = String(date.getDate()).padStart(2, '0');
 const mm = String(date.getMonth() + 1).padStart(2, '0');
@@ -172,18 +194,19 @@ const yyyy = date.getFullYear();
 return `${dd}.${mm}.${yyyy}`;
 };
 
-// 📆 Build 7-day date list in DD.MM.YYYY format
+// Build 7-day date array
 const weekDates = Array.from({ length: 7 }, (_, i) => {
 const d = new Date(startDateObj);
 d.setDate(startDateObj.getDate() + i);
 return formatDisplayDate(d);
 });
 
-// 🛠️ Initialize daily summary
+// Initialize daily summary
 const dailyCompleted = weekDates.map(date => ({
 date,
 total: 0,
 value: 0,
+rework: 0, // ✅ Add rework field
 functional: 0,
 calibration: 0,
 accuracy: 0,
@@ -191,7 +214,7 @@ nic: 0,
 finalInit: 0
 }));
 
-// 🔁 Map JSON data into the week structure
+// Process each entry into the correct day
 weekArray.forEach(entry => {
 const entryDate = entry.date?.trim(); // e.g. "20.07.2025"
 const day = dailyCompleted.find(d => d.date === entryDate);
@@ -204,12 +227,14 @@ day.total += count;
 });
 
 day.value += entry.Completed || 0;
+day.rework += entry.Rework || 0; // ✅ Accumulate Rework
 });
 
-// 📊 Weekly totals
+// Calculate weekly totals
 const weeklyTotals = {
 total: dailyCompleted.reduce((sum, d) => sum + d.total, 0),
 completed: dailyCompleted.reduce((sum, d) => sum + d.value, 0),
+rework: dailyCompleted.reduce((sum, d) => sum + d.rework, 0), // ✅ Include in weekly summary
 functional: dailyCompleted.reduce((sum, d) => sum + d.functional, 0),
 calibration: dailyCompleted.reduce((sum, d) => sum + d.calibration, 0),
 accuracy: dailyCompleted.reduce((sum, d) => sum + d.accuracy, 0),
@@ -220,8 +245,6 @@ dailyCompleted
 
 return weeklyTotals;
 };
-
-
 
 const Dashboard = () => {
 const [data, setData] = useState(null);
@@ -247,7 +270,6 @@ const intervalToUpdateClock = setInterval(() => {
 setCurrentDate(new Date());
 }, 1000);
 cleanupFns.current.push(() => clearInterval(intervalToUpdateClock));
-
 
 const fetchData = async () => {
 try {
@@ -349,7 +371,6 @@ const hourlyDetailsPrevious = buildHourlyDetails(hourlyMapPrevious);
 // ✅ You can now use these values in state or dashboard cards
 console.log('Hourly Details (Present):', hourlyDetailsCurrent);
 console.log('Hourly Details (Previous):', hourlyDetailsPrevious);
-
 
 // Compute weekly date ranges
 const today = new Date();
@@ -746,13 +767,13 @@ if (selectedRange === 'Day') {
 report = {
 passed: data?.presentDay?.completed || 0,
 failed: (data?.presentDay?.total || 0) - (data?.presentDay?.completed || 0),
-reworked: data?.dailyReport?.reworked || 0 // Use dailyReport for reworked if available
+reworked: data?.presentDay?.rework || data?.dailyReport?.reworked || 0  // ✅ Present day rework
 };
 } else if (selectedRange === 'Previous Day') {
 report = {
 passed: data?.previousDay?.completed || 0,
 failed: (data?.previousDay?.total || 0) - (data?.previousDay?.completed || 0),
-reworked: 0 // Assuming reworked not available for previous day in provided structure
+reworked: data?.previousDay?.rework || 0 // ✅ Add support if `rework` exists in API
 };
 } else if (selectedRange === 'Present Week') {
 const weekData = data?.presentWeek;
@@ -760,7 +781,7 @@ if (weekData) {
 report = {
 passed: weekData.completed || 0,
 failed: (weekData.total || 0) - (weekData.completed || 0),
-reworked: 0, // Assuming reworked is not directly calculated from week data
+reworked: weekData.rework || 0 // ✅ Pull from weekly summary
 };
 }
 } else if (selectedRange === 'Previous Week') {
@@ -769,7 +790,7 @@ if (weekData) {
 report = {
 passed: weekData.completed || 0,
 failed: (weekData.total || 0) - (weekData.completed || 0),
-reworked: 0,
+reworked: weekData.rework || 0 // ✅ Pull from weekly summary
 };
 }
 }
@@ -932,6 +953,7 @@ calibration={data?.[selectedRange === 'Day' ? 'presentDay' : 'previousDay']?.cal
 accuracy={data?.[selectedRange === 'Day' ? 'presentDay' : 'previousDay']?.accuracy || 0}
 nic={data?.[selectedRange === 'Day' ? 'presentDay' : 'previousDay']?.nic || 0}
 finalInit={data?.[selectedRange === 'Day' ? 'presentDay' : 'previousDay']?.finalInit || 0}
+rework={data?.[selectedRange === 'Day' ? 'presentDay' : 'previousDay']?.rework || 0}
 bgColor="from-sky-400 to-sky-600"
 icon="calendar"
 title={selectedRange}
@@ -949,6 +971,7 @@ calibration={shift.calibration}
 accuracy={shift.accuracy}
 nic={shift.nic}
 finalInit={shift.finalInit}
+ rework={shift.rework || 0}
 bgColor={
 ["from-purple-400 to-purple-600", "from-yellow-400 to-yellow-600", "from-indigo-400 to-indigo-600"][i]
 }
@@ -980,6 +1003,7 @@ calibration={data?.[selectedRange === 'Present Week' ? 'presentWeek' : 'previous
 accuracy={data?.[selectedRange === 'Present Week' ? 'presentWeek' : 'previousWeek']?.accuracy || 0}
 nic={data?.[selectedRange === 'Present Week' ? 'presentWeek' : 'previousWeek']?.nic || 0}
 finalInit={data?.[selectedRange === 'Present Week' ? 'presentWeek' : 'previousWeek']?.finalInit || 0}
+rework={data?.[selectedRange === 'Present Week' ? 'presentWeek' : 'previousWeek']?.rework || 0}
 bgColor="from-cyan-500 to-blue-500"
 icon="calendarWeek"
 title={selectedRange}
@@ -1016,6 +1040,7 @@ calibration={item.calibration}
 accuracy={item.accuracy}
 nic={item.nic}
 finalInit={item.finalInit}
+rework={item.rework || 0}
 bgColor={colors[i % colors.length]}
 icon="calendar"
 title={`${dayDate} - ${dayName}`}
