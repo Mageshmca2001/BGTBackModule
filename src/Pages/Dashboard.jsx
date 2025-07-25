@@ -68,14 +68,14 @@ const shiftTotals = {
 function initShiftData(shift) {
 return {
 shift,
-total: 0,         // Pass + Fail (all test types)
-completed: 0,     // total - rework
+total: 0,         // Sum of all (pass + fail - rework) from Functional to Final
+completed: 0,     // Only: FinalTest_Pass + FinalTest_Fail - FinalTest_Rework
 functional: 0,
 calibration: 0,
 accuracy: 0,
 nic: 0,
 finalInit: 0,
-rework: 0
+rework: 0         // Total rework across all tests
 };
 }
 
@@ -91,47 +91,44 @@ const shift = getShiftCode(entry.ShiftName);
 if (!shiftTotals[shift]) return;
 
 const s = shiftTotals[shift];
-const tests = ['FunctionalTest', 'CalibrationTest', 'AccuracyTest', 'NICComTest', 'FinalTest'];
 
-let shiftTested = 0;
-let shiftRework = 0;
+const tests = ['FunctionalTest', 'CalibrationTest', 'AccuracyTest', 'NICComTest', 'FinalTest'];
 
 tests.forEach((test) => {
 const pass = entry[`${test}_Pass`] || 0;
 const fail = entry[`${test}_Fail`] || 0;
 const rework = entry[`${test}_Rework`] || 0;
 
-const tested = pass + fail;
-shiftTested += tested;
-shiftRework += rework;
+const testedMinusRework = pass + fail - rework;
 
-// Breakdown per test type (using raw tested, not subtracting rework)
 switch (test) {
 case 'FunctionalTest':
-s.functional += tested;
-break;
+    s.functional += testedMinusRework;
+    break;
 case 'CalibrationTest':
-s.calibration += tested;
-break;
+    s.calibration += testedMinusRework;
+    break;
 case 'AccuracyTest':
-s.accuracy += tested;
-break;
+    s.accuracy += testedMinusRework;
+    break;
 case 'NICComTest':
-s.nic += tested;
-break;
+    s.nic += testedMinusRework;
+    break;
 case 'FinalTest':
-s.finalInit += tested;
-break;
+    s.finalInit += testedMinusRework;
+    s.completed += pass + fail - rework; // ✅ ONLY from FinalTest
+    break;
 }
-});
 
-s.total += shiftTested;
-s.rework += shiftRework;
-s.completed += shiftTested - shiftRework;  // ✅ total - rework
+s.total += testedMinusRework;
+s.rework += rework;
+});
 });
 
 return ['06-14', '14-22', '22-06'].map((shift) => shiftTotals[shift]);
 };
+
+
 // Helper to compute total of a day from shift cards
 const calculateDayTotalsFromShifts = (shiftCards) => {
 return shiftCards.reduce(
@@ -791,7 +788,7 @@ return {
 labels: ['passed', 'failed', 'reworked'],
 datasets: [{
 data: [report.passed, report.failed, report.reworked],
-backgroundColor: ['rgba(11, 190, 77, 0.7)', '#EF4444', '#317ff5ff'],
+backgroundColor: ['rgba(11, 190, 77, 0.7)', '#EF4444', '#ffbb00ff'],
 borderColor: '#fff',
 borderWidth: 2,
 hoverOffset: 10,
@@ -862,13 +859,6 @@ const filteredDatasets = useMemo(() => {
 return datasets.filter((ds) => visibleDatasets[ds.label] !== false);
 }, [datasets, visibleDatasets]);
 
-const fieldKeyMap = {
-Functional: 'functional',
-Calibration: 'calibration',
-Accuracy: 'accuracy',
-NIC: 'nic',
-FinalTest: 'finalInit', // Use your backend's correct key
-};
 
 // Error or Loading
 if (loading) return <LoadingDots />;
