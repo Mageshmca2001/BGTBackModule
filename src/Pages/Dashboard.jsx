@@ -62,14 +62,14 @@ const extractShiftData = (shiftSummaryArray) => {
 const shiftTotals = {
 '06-14': initShiftData('06-14'),
 '14-22': initShiftData('14-22'),
-'22-06': initShiftData('22-06')
+'22-06': initShiftData('22-06'),
 };
 
 function initShiftData(shift) {
 return {
 shift,
-total: 0,
-completed: 0,
+total: 0,         // Pass + Fail (all test types)
+completed: 0,     // total - rework
 functional: 0,
 calibration: 0,
 accuracy: 0,
@@ -91,56 +91,46 @@ const shift = getShiftCode(entry.ShiftName);
 if (!shiftTotals[shift]) return;
 
 const s = shiftTotals[shift];
+const tests = ['FunctionalTest', 'CalibrationTest', 'AccuracyTest', 'NICComTest', 'FinalTest'];
 
-const functionalPass = entry.FunctionalTest_Pass || 0;
-const functionalFail = entry.FunctionalTest_Fail || 0;
-const functionalRework = entry.FunctionalTest_Rework || 0;
+let shiftTested = 0;
+let shiftRework = 0;
 
-const calibrationPass = entry.CalibrationTest_Pass || 0;
-const calibrationFail = entry.CalibrationTest_Fail || 0;
-const calibrationRework = entry.CalibrationTest_Rework || 0;
+tests.forEach((test) => {
+const pass = entry[`${test}_Pass`] || 0;
+const fail = entry[`${test}_Fail`] || 0;
+const rework = entry[`${test}_Rework`] || 0;
 
-const accuracyPass = entry.AccuracyTest_Pass || 0;
-const accuracyFail = entry.AccuracyTest_Fail || 0;
-const accuracyRework = entry.AccuracyTest_Rework || 0;
+const tested = pass + fail;
+shiftTested += tested;
+shiftRework += rework;
 
-const nicPass = entry.NICComTest_Pass || 0;
-const nicFail = entry.NICComTest_Fail || 0;
-const nicRework = entry.NICComTest_Rework || 0;
-
-const finalPass = entry.FinalTest_Pass || 0;
-const finalFail = entry.FinalTest_Fail || 0;
-const finalRework = entry.FinalTest_Rework || 0;
-
-// Add total count for each test type (pass + fail)
-s.functional += functionalPass + functionalFail;
-s.calibration += calibrationPass + calibrationFail;
-s.accuracy += accuracyPass + accuracyFail;
-s.nic += nicPass + nicFail;
-s.finalInit += finalPass + finalFail;
-
-// Add rework count (all tests)
-s.rework +=
-functionalRework +
-calibrationRework +
-accuracyRework +
-nicRework +
-finalRework;
-
-// Completed is total of all "PASS"
-s.completed +=
-functionalPass + calibrationPass + accuracyPass + nicPass + finalPass;
-
-// Total includes pass + fail only (not rework)
-s.total +=
-functionalPass + functionalFail +
-calibrationPass + calibrationFail +
-accuracyPass + accuracyFail +
-nicPass + nicFail +
-finalPass + finalFail;
+// Breakdown per test type (using raw tested, not subtracting rework)
+switch (test) {
+case 'FunctionalTest':
+s.functional += tested;
+break;
+case 'CalibrationTest':
+s.calibration += tested;
+break;
+case 'AccuracyTest':
+s.accuracy += tested;
+break;
+case 'NICComTest':
+s.nic += tested;
+break;
+case 'FinalTest':
+s.finalInit += tested;
+break;
+}
 });
 
-return ['06-14', '14-22', '22-06'].map(shift => shiftTotals[shift]);
+s.total += shiftTested;
+s.rework += shiftRework;
+s.completed += shiftTested - shiftRework;  // ✅ total - rework
+});
+
+return ['06-14', '14-22', '22-06'].map((shift) => shiftTotals[shift]);
 };
 // Helper to compute total of a day from shift cards
 const calculateDayTotalsFromShifts = (shiftCards) => {
@@ -481,9 +471,9 @@ const breakdownFields = ['Functional', 'Calibration', 'Accuracy', 'NIC', 'FinalT
 const getDailyReportTitle = () => {
 switch (selectedRange) {
 case 'Day':
-return 'Today Reports';
+return 'Daily Reports';
 case 'Previous Day':
-return 'Yesterday Reports';
+return 'Previous Day Reports';
 case 'Present Week':
 return 'Weekly Reports';
 case 'Previous Week':
@@ -609,9 +599,13 @@ year: 'numeric'
 })()
 : filteredHourlyDetails
 .filter(item => isTimeInShift(item.time, selectedShift))
-.map(item => item.time); // Or format hours as needed
+.map(item => {
+const startHour = parseInt(item.time, 10);
+const endHour = (startHour + 1) % 24;
 
-
+const format = (h) => String(h).padStart(2, '0') + '.00';
+return `${format(startHour)} - ${format(endHour)}`;
+});
 
 const colors = ['#3B82F6', '#F59E0B', '#10B981', '#EF4444', '#8B5CF6'];
 
@@ -1278,81 +1272,6 @@ plugins={[ChartDataLabels]}
 </motion.div>
 </section>
 
-
-<section className="bg-white rounded-2xl shadow-lg p-6 mt-6 font-poppins">
-
-{/* 🔢 Total Summary Breakdown Section */}
-
-
-{/* 📊 Total Summary Pie Chart Section */}
-<motion.div>
-<h3 className="text-2xl font-semibold text-primary text-center mt-12 mb-8">Total Summary Pie Chart</h3>
-
-{/* 🟢 First Yield Report Totals */}
-<div className="mb-6">
-<h2 className="text-base4 font-bold text-left text-primary mb-6">
-First Yield & {getDailyReportTitle()}
-</h2>
-<div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-center">
-{/* Passed */}
-<div className="bg-white border rounded p-4 shadow">
-<div className="text-sm text-gray-600">Passed</div>
-<div className="text-xl font-bold text-green-600">
-{firstFieldPieData.datasets[0].data?.[0]?.toFixed(0) ?? 0}
-</div>
-</div>
-
-{/* Failed */}
-<div className="bg-white border rounded p-4 shadow">
-<div className="text-sm text-gray-600">Failed</div>
-<div className="text-xl font-bold text-red-500">
-{firstFieldPieData.datasets[0].data?.[1]?.toFixed(0) ?? 0}
-</div>
-</div>
-
-{/* Total Tested */}
-<div className="bg-white border rounded p-4 shadow">
-<div className="text-sm text-gray-600">Total Tested</div>
-<div className="text-xl font-bold text-blue-600">
-{((
-(firstFieldPieData.datasets[0].data?.[0] ?? 0) +
-(firstFieldPieData.datasets[0].data?.[1] ?? 0)
-).toFixed(0))}
-</div>
-</div>
-</div>
-</div>
-
-
-{/* 🔵 Daily Report Totals */}
-<div className="mb-6">
-<h4 className="text-base4 font-semibold text-primary mb-4">
-{getDailyReportTitle()}
-</h4>
-
-<div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-center">
-<div className="bg-white border rounded p-4 shadow">
-<div className="text-sm text-gray-600">Passed</div>
-<div className="text-xl font-bold text-green-600">
-{dailyReportPieData.datasets[0].data?.[0]?.toFixed(0) ?? 0}
-</div>
-</div>
-<div className="bg-white border rounded p-4 shadow">
-<div className="text-sm text-gray-600">Failed</div>
-<div className="text-xl font-bold text-red-500">
-{dailyReportPieData.datasets[0].data?.[1]?.toFixed(0) ?? 0}
-</div>
-</div>
-<div className="bg-white border rounded p-4 shadow">
-<div className="text-sm text-gray-600">Reworked</div>
-<div className="text-xl font-bold text-blue-600">
-{dailyReportPieData.datasets[0].data?.[2]?.toFixed(0) ?? 0}
-</div>
-</div>
-</div>
-</div>
-</motion.div>
-</section>
 
 </main>
 </>
